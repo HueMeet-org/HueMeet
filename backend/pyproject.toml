@@ -1,0 +1,39 @@
+[project]
+name = "HueMeet"
+description = "Exchange skills with professionals. Find someone who has what you want to learn and wants what you can teach. Free peer-to-peer learning."
+authors = [{ name = "HueMeet Team"}]
+version = "0.0.1"
+readme = "README.md"
+requires-python = ">=3.11,<4.0"
+keywords = [
+    "HueMeet",
+    "introlix",
+    "Chat",
+    "Call",
+    "Make Friends",
+    "knowledge-sharing",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Designers",
+    "Intended Audience :: Educators",
+    "Intended Audience :: Students",
+    "Intended Audience :: Professionals",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Operating System :: OS Independent",
+    "Framework :: FastAPI",
+]
+
+dependencies = [
+    "python-dotenv>=1.0.1",
+    "requests>=2.32.5",
+    "fastapi>=0.116.1",
+    "uvicorn>=0.37.0",
+    "torch>=2.8.0",
+    "tiktoken>=0.11.0",
+]
+[tool.setuptools.packages.find]
+include = ["src*"]
