@@ -19,12 +19,7 @@ import { NavUser } from "./nav-user"
 import { usePathname } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { useEffect, useState } from "react"
-
-interface UserProfile {
-    imageUrl: string;
-    username: string;
-    fullName: string;
-}
+import UserProfile from "@/types/user"
 
 // Menu items.
 const items = [
@@ -63,7 +58,7 @@ export function AppSidebar() {
 
         const { data, error } = await supabase
             .from("profiles")
-            .select('avatar_url, username, full_name')
+            .select('*')
             .eq('id', user.id)
             .single()
 
@@ -72,11 +67,10 @@ export function AppSidebar() {
             return null
         }
 
-        // 1. Get values from the profile table
+        // Get values from the profile table
         const username = data.username
         const fullName = data.full_name
 
-        // 2. Logic for Avatar URL
         // Priority: Database -> Google Metadata -> Default Local Icon
         let imageUrl = data.avatar_url;
 
