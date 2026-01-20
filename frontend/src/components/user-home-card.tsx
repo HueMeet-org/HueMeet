@@ -3,8 +3,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Card, CardAction, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './ui/card'
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client';
-import UserProfileComplete from '@/types/user-complete';
 import { Sparkles, Users } from 'lucide-react';
+import { UserProfileComplete } from '@/types/user';
 
 export const UserHomeCard = () => {
     const [userData, setUserData] = useState<UserProfileComplete | null>(null);
