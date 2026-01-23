@@ -19,7 +19,7 @@ import { NavUser } from "./nav-user"
 import { usePathname } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { useEffect, useState } from "react"
-import UserProfile from "@/types/user"
+import { UserProfile } from "@/types/user"
 
 // Menu items.
 const items = [
