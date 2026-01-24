@@ -21,7 +21,7 @@ import {
     useSidebar,
 } from "@/components/ui/sidebar"
 import { createClient } from "@/lib/supabase/client"
-import UserProfile from "@/types/user"
+import { UserProfile } from "@/types/user"
 import { EllipsisVertical, LogOut, Settings, UserCircle } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"

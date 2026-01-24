@@ -241,37 +241,40 @@ export function HeatmapCalendar({
   const totalDays = Math.ceil((end.getTime() - firstWeek.getTime()) / 86400000) + 1;
   const weeks = Math.ceil(totalDays / 7);
 
-  const cells: HeatmapCell[] = [];
-  for (let w = 0; w < weeks; w++) {
-    for (let d = 0; d < 7; d++) {
-      const date = addDays(firstWeek, w * 7 + d);
-      const inRange = date >= start && date <= end;
-      const key = toKey(date);
+  const columns = React.useMemo(() => {
+    const cells: HeatmapCell[] = [];
+    for (let w = 0; w < weeks; w++) {
+      for (let d = 0; d < 7; d++) {
+        const date = addDays(firstWeek, w * 7 + d);
+        const inRange = date >= start && date <= end;
+        const key = toKey(date);
 
-      const v = inRange ? (valueMap.get(key)?.value ?? 0) : 0;
-      const meta = inRange ? valueMap.get(key)?.meta : undefined;
-      const lvl = inRange ? getLevel(v) : 0;
+        const v = inRange ? (valueMap.get(key)?.value ?? 0) : 0;
+        const meta = inRange ? valueMap.get(key)?.meta : undefined;
+        const lvl = inRange ? getLevel(v) : 0;
 
-      cells.push({
-        date,
-        key,
-        value: v,
-        level: clampLevel(lvl, levelCount),
-        disabled: !inRange,
-        meta,
-        label: date.toLocaleDateString(undefined, {
-          year: "numeric",
-          month: "short",
-          day: "numeric",
-        }),
-      });
+        cells.push({
+          date,
+          key,
+          value: v,
+          level: clampLevel(lvl, levelCount),
+          disabled: !inRange,
+          meta,
+          label: date.toLocaleDateString(undefined, {
+            year: "numeric",
+            month: "short",
+            day: "numeric",
+          }),
+        });
+      }
     }
-  }
 
-  const columns: HeatmapCell[][] = [];
-  for (let i = 0; i < weeks; i++) {
-    columns.push(cells.slice(i * 7, i * 7 + 7));
-  }
+    const cols: HeatmapCell[][] = [];
+    for (let i = 0; i < weeks; i++) {
+      cols.push(cells.slice(i * 7, i * 7 + 7));
+    }
+    return cols;
+  }, [weeks, firstWeek, start, end, valueMap, levelCount]);
 
   const monthLabels = React.useMemo(() => {
     if (!showAxis || !showMonths) return [] as { colIndex: number; text: string }[];
@@ -288,7 +291,8 @@ export function HeatmapCalendar({
 
       const monthChanged = !prevFirst || !sameMonth(firstInCol, prevFirst);
 
-      if (monthChanged && i - lastLabeledWeek >= minWeekSpacing) {
+      // Always show first month, then respect minWeekSpacing for others
+      if (monthChanged && (labels.length === 0 || i - lastLabeledWeek >= minWeekSpacing)) {
         labels.push({ colIndex: i, text: formatMonth(firstInCol, monthFormat) });
         lastLabeledWeek = i;
       }
@@ -364,36 +368,81 @@ export function HeatmapCalendar({
     );
   };
 
-  const weekdayLabelWidth = showAxis && showWeekdays ? 44 : 0;
+  const weekdayLabelWidth = showAxis && showWeekdays ? 48 : 0;
+  const containerRef = React.useRef<HTMLDivElement | null>(null);
+
+  React.useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    const columnsCount = columns.length || 1;
+
+    const setSizes = () => {
+      // Get the actual container width
+      const containerWidth = el.clientWidth;
+      
+      // Account for weekday label width if shown
+      const labelWidth = showAxis && showWeekdays ? weekdayLabelWidth : 0;
+      const availableWidth = containerWidth - labelWidth;
+      
+      // Calculate optimal gap based on container size
+      const gap = Math.max(2, Math.min(4, Math.floor(availableWidth / (columnsCount * 15))));
+      const totalGapWidth = (columnsCount - 1) * gap;
+      const calculated = (availableWidth - totalGapWidth) / columnsCount;
+      
+      // Set minimum cell size for readability - will trigger horizontal scroll if needed
+      const minCell = 10; // Don't shrink below this for readability
+      const maxCell = 20;
+      const cell = Math.max(minCell, Math.min(maxCell, Math.floor(calculated)));
+      
+      el.style.setProperty("--cell-size", `${cell}px`);
+      el.style.setProperty("--cell-gap", `${gap}px`);
+    };
+
+    setSizes();
+    const ro = new ResizeObserver(() => setSizes());
+    ro.observe(el);
+    return () => {
+      ro.disconnect();
+    };
+  }, [columns.length, cellGap, weekdayLabelWidth, showAxis, showWeekdays]);
 
   return (
-    <Card className={cn(className)}>
+    <Card className={cn("w-full", className)}>
       <CardHeader className="pb-3">
-        <CardTitle className="text-base">{title}</CardTitle>
+        <CardTitle className="text-base sm:text-lg">{title}</CardTitle>
       </CardHeader>
 
-      <CardContent>
+      <CardContent className="w-full">
         <TooltipProvider delayDuration={80}>
-          <div className={cn("flex gap-4 overflow-x-auto", placement === "bottom" && "flex-col")}>
+          <div className={cn("flex gap-4", placement === "bottom" && "flex-col")}>
             {/* Labeled calendar area */}
-            <div className={cn("min-w-0", axisCfg.className)}>
+              <div
+                ref={containerRef}
+                className={cn("w-full overflow-x-auto", axisCfg.className)}
+                style={{
+                  "--cell-size": `${cellSize}px`,
+                  "--cell-gap": `${cellGap}px`,
+                } as React.CSSProperties}
+              >
               {/* Month labels row */}
               {showAxis && showMonths ? (
                 <div className="flex items-end" style={{ paddingLeft: weekdayLabelWidth }}>
-                  <div
-                    className="relative"
-                    style={{
-                      height: 18,
-                      width: columns.length * (cellSize + cellGap) - cellGap,
-                    }}
-                  >
+                    <div
+                      className="relative"
+                      style={{
+                        height: 18,
+                        width: `calc(${columns.length} * (var(--cell-size) + var(--cell-gap)) - var(--cell-gap))`,
+                      }}
+                    >
                     {monthLabels.map((m) => (
                       <div
                         key={m.colIndex}
-                        className="absolute text-xs text-muted-foreground"
+                        className="absolute text-muted-foreground whitespace-nowrap"
                         style={{
-                          left: m.colIndex * (cellSize + cellGap),
+                          left: `calc(${m.colIndex} * (var(--cell-size) + var(--cell-gap)))`,
                           top: 0,
+                          fontSize: `clamp(9px, calc(var(--cell-size) * 0.85), 12px)`,
                         }}
                       >
                         {m.text}
@@ -403,19 +452,19 @@ export function HeatmapCalendar({
                 </div>
               ) : null}
 
-              <div className="flex">
+                  <div className="flex" style={{ minWidth: "max-content" }}>
                 {/* Weekday labels column */}
-                {showAxis && showWeekdays ? (
+                  {showAxis && showWeekdays ? (
                   <div
-                    className="mr-2 flex flex-col"
-                    style={{ gap: `${cellGap}px` }}
+                    className="mr-2 flex flex-col flex-shrink-0"
+                    style={{ gap: "var(--cell-gap)" }}
                     aria-hidden="true"
                   >
                     {Array.from({ length: 7 }).map((_, rowIdx) => (
                       <div
                         key={rowIdx}
                         className="flex items-center justify-end text-xs text-muted-foreground"
-                        style={{ width: 40, height: cellSize }}
+                        style={{ width: 42, height: "var(--cell-size)" }}
                       >
                         {weekdayIndices.includes(rowIdx)
                           ? weekdayLabelForIndex(rowIdx, weekStartsOn)
@@ -426,17 +475,12 @@ export function HeatmapCalendar({
                 ) : null}
 
                 {/* Heatmap grid */}
-                <div
-                  className="flex"
-                  style={{ gap: `${cellGap}px` }}
-                  role="grid"
-                  aria-label="Heatmap calendar"
-                >
+                <div className="flex flex-shrink-0 " style={{ gap: "var(--cell-gap)" }} role="grid" aria-label="Heatmap calendar">
                   {columns.map((col, i) => (
                     <div
                       key={i}
                       className="flex flex-col"
-                      style={{ gap: `${cellGap}px` }}
+                      style={{ gap: "var(--cell-gap)" }}
                       role="rowgroup"
                     >
                       {col.map((cell) => {
@@ -450,12 +494,13 @@ export function HeatmapCalendar({
                                 onClick={() => !cell.disabled && onCellClick?.(cell)}
                                 className={cn(
                                   "rounded-[3px] outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                                  // If palette is provided we rely on inline styles for color; only add opacity for non-palette mode
                                   !palette?.length && cls,
-                                  cell.disabled && "cursor-default opacity-30 pointer-events-none",
+                                  cell.disabled && (palette?.length ? "cursor-default pointer-events-none" : "cursor-default opacity-30 pointer-events-none"),
                                 )}
                                 style={{
-                                  width: cellSize,
-                                  height: cellSize,
+                                  width: "var(--cell-size)",
+                                  height: "var(--cell-size)",
                                   ...(bgStyleForLevel(cell.level, palette) ?? {}),
                                 }}
                                 aria-label={

@@ -6,14 +6,15 @@ import { UserHomeCard } from "@/components/user-home-card";
 
 export default function Home() {
   return (
-    <div className="grid gap-6 p-6">
-      {/* TOP ROW */}
-      <div className="grid grid-cols-[280px_1fr] gap-6 p-6">
-        <UserHomeCard />
-        <HeatMap />
-      </div>
-      {/* BOTTOM ROW (50 / 50) */}
-      <div className="grid grid-cols-3 gap-6 p-6">
+    <div className="flex flex-col gap-6">
+      {/* USER PROFILE SECTION - Top */}
+      <UserHomeCard />
+      
+      {/* ACTIVITY GRAPH - Below profile */}
+      <HeatMap />
+      
+      {/* BOTTOM CARDS - Responsive Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <HomeConnections />
         <HomeRecommendedMatch />
         <HomeNotification />
