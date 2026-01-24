@@ -114,29 +114,28 @@ export const HomeConnections = () => {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Active Connections</CardTitle>
+    <Card className="h-full flex flex-col m-0 p-0 gap-0">
+      <CardHeader className="py-4 px-4">
+        <CardTitle className="text-base sm:text-lg">Active Connections</CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="flex-1 px-0  mx-2 py-0 gap-0">
         {!loading && connections.map((user) => (
-          <Item className='cursor-pointer hover:bg-muted' key={user.id}>
-            <ItemContent>
+          <Item className='cursor-pointer gap-0 p-0 hover:bg-muted rounded-lg transition-colors' key={user.id}>
+            <ItemContent className="p-3">
               <Link href={`/profile/${user.username}`} >
-                <div className='w-full flex'>
-                  <div className="">
-                    <div className="relative">
-                      <Avatar className="h-10 w-10">
-                        <AvatarImage src={user.avatarUrl} />
-                        <AvatarFallback>{user.name[0]}</AvatarFallback>
-                      </Avatar>
+                <div className='w-full flex items-center gap-3'>
+                  <div className="relative flex-shrink-0">
+                    <Avatar className="h-10 w-10 sm:h-12 sm:w-12">
+                      <AvatarImage src={user.avatarUrl} />
+                      <AvatarFallback>{user.name[0]}</AvatarFallback>
+                    </Avatar>
 
                       {/* Notification Notch */}
-                      {user.unreadCount > 0 && <span className='absolute bottom-0 right-0 bg-red-800 rounded-full h-4 px-1 items-center justify-center text-center flex font-semibold'>{user.unreadCount}</span>}
+                      {user.unreadCount > 0 && <span className='absolute -bottom-1 -right-1 bg-red-600 rounded-full h-5 w-5 flex items-center justify-center text-[10px] font-bold text-white border-2 border-background'>{user.unreadCount > 99 ? '99+' : user.unreadCount}</span>}
 
                       {/* Status Indicator Notch */}
                       <span className={
-                        cn('absolute top-0 left-0-0 block h-3 w-3 rounded-full border-2 border-background',
+                        cn('absolute -top-0.5 -left-0.5 block h-3 w-3 rounded-full border-2 border-background',
                           user.presence === 'online' ? 'bg-green-500' :
                           user.presence === 'away' ? 'bg-yellow-500' :
                           user.presence === 'offline' ? 'bg-slate-400' :
@@ -146,16 +145,15 @@ export const HomeConnections = () => {
 
                       {/* Optional: Typing Dot Animation Overlay */}
                       {user.presence === 'typing' && (
-                        <span className="absolute top-0 left-0 flex h-3 w-3">
+                        <span className="absolute -top-0.5 -left-0.5 flex h-3 w-3">
                           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                          <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                          <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500 border-2 border-background"></span>
                         </span>
                       )}
                     </div>
-                  </div>
-                  <div className="ml-2">
-                    <ItemTitle>{user.name}</ItemTitle>
-                    <ItemDescription>{user.lastMessage}</ItemDescription>
+                  <div className="flex-1 p-0">
+                    <ItemTitle className="truncate text-sm sm:text-base">{user.name}</ItemTitle>
+                    <ItemDescription className="truncate text-xs sm:text-xs">{user.lastMessage}</ItemDescription>
                   </div>
                 </div>
               </Link>

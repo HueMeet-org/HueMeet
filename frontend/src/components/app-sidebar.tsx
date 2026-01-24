@@ -1,6 +1,6 @@
 "use client"
 
-import { Bell, Calendar, Home, Inbox, Search, Settings } from "lucide-react"
+import { Bell, Calendar, Home, Inbox, Search, Settings, X } from "lucide-react"
 
 import {
     Sidebar,
@@ -20,6 +20,8 @@ import { usePathname } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { useEffect, useState } from "react"
 import { UserProfile } from "@/types/user"
+import { useSidebar } from "@/components/ui/sidebar"
+import { Button } from "@/components/ui/button"
 
 // Menu items.
 const items = [
@@ -48,6 +50,7 @@ const items = [
 export function AppSidebar() {
     const [userData, setUserData] = useState<UserProfile | null>(null);
     const pathname = usePathname()
+    const { setOpenMobile, isMobile } = useSidebar()
     const supabase = createClient()
 
     const getUserData = async () => {
@@ -100,30 +103,56 @@ export function AppSidebar() {
     return (
         <Sidebar>
             <SidebarHeader>
-                <SidebarMenu>
-                    <SidebarMenuItem>
-                        <SidebarMenuButton
-                            asChild
-                        >
-                            <Link href={'/'} className="text-xl font-semibold">Hue<span className="-ml-2 font-extrabold">Meet</span></Link>
-                        </SidebarMenuButton>
-                    </SidebarMenuItem>
-                </SidebarMenu>
+                <div className="flex items-center justify-between  py-2">
+                    <SidebarMenu>
+                        <SidebarMenuItem>
+                            <SidebarMenuButton
+                                asChild
+                            >
+                                <Link href={'/'} className="text-xl font-semibold">Hue<span className="-ml-2 font-extrabold">Meet</span></Link>
+                            </SidebarMenuButton>
+                        </SidebarMenuItem>
+                    </SidebarMenu>
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className={isMobile ? "block" : "hidden"}
+                        onClick={() => setOpenMobile(false)}
+                    >
+                        <X className="h-4 w-4" />
+                        <span className="sr-only">Close sidebar</span>
+                    </Button>
+                </div>
             </SidebarHeader>
             <SidebarContent>
                 <SidebarGroup>
                     <SidebarGroupContent>
                         <SidebarMenu>
-                            {items.map((item) => (
-                                <SidebarMenuItem key={item.title}>
-                                    <SidebarMenuButton asChild>
-                                        <Link href={item.url}>
-                                            <item.icon />
-                                            <span>{item.title}</span>
-                                        </Link>
-                                    </SidebarMenuButton>
-                                </SidebarMenuItem>
-                            ))}
+                            {items.map((item) => {
+                                const isActive =
+                                    item.url === '/'
+                                        ? pathname === '/'
+                                        : pathname === item.url || pathname.startsWith(item.url + '/');
+
+                                return (
+                                    <SidebarMenuItem key={item.title}>
+                                        <SidebarMenuButton 
+                                            asChild 
+                                            isActive={isActive}
+                                            onClick={() => {
+                                                if (isMobile) {
+                                                    setOpenMobile(false);
+                                                }
+                                            }}
+                                        >
+                                            <Link href={item.url}>
+                                                <item.icon />
+                                                <span>{item.title}</span>
+                                            </Link>
+                                        </SidebarMenuButton>
+                                    </SidebarMenuItem>
+                                )
+                            })}
                         </SidebarMenu>
                     </SidebarGroupContent>
                 </SidebarGroup>

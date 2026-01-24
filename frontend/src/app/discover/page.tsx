@@ -48,9 +48,13 @@ export default function DiscoverPage() {
     try {
       await sendConnectionRequest(receiverId)
       setRequestsSent(prev => new Set([...prev, receiverId]))
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error sending request:', error)
-      alert(error.message || 'Failed to send connection request')
+      if (error instanceof Error) {
+        alert(error.message)
+      } else {
+        alert('Failed to send connection request')
+      }
     } finally {
       setSendingRequest(null)
     }
@@ -58,10 +62,10 @@ export default function DiscoverPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen from-background to-muted/20 p-6">
+      <div className="min-h-screen from-background to-muted/20 p-4 md:p-6">
         <div className="mx-auto max-w-6xl">
-          <Skeleton className="h-12 w-64 mb-8" />
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <Skeleton className="h-10 md:h-12 w-48 md:w-64 mb-6 md:mb-8" />
+          <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
             {[...Array(6)].map((_, i) => (
               <Card key={i}>
                 <CardHeader>
@@ -84,36 +88,37 @@ export default function DiscoverPage() {
   }
 
   return (
-    <div className="min-h-screen from-background to-muted/20 p-6">
+    <div className="min-h-screen from-background to-muted/20 p-4 md:p-6">
       <div className="mx-auto max-w-6xl">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold tracking-tight flex items-center gap-3">
-            <Users className="h-10 w-10" />
+        <div className="mb-6 md:mb-8">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight flex items-center gap-2 md:gap-3">
+            <Users className="h-8 w-8 md:h-10 md:w-10" />
             Discover People
           </h1>
-          <p className="mt-2 text-muted-foreground">
+          <p className="mt-2 text-sm md:text-base text-muted-foreground">
             Connect with people who share your interests
           </p>
         </div>
 
         {/* Tabs */}
         <Tabs defaultValue="recommended" className="w-full">
-          <TabsList className="mb-6">
-            <TabsTrigger value="recommended" className="gap-2">
-              <Sparkles className="h-4 w-4" />
-              For You
+          <TabsList className="mb-4 md:mb-6 w-full sm:w-auto grid grid-cols-2 sm:inline-grid">
+            <TabsTrigger value="recommended" className="gap-1 sm:gap-2 text-xs sm:text-sm">
+              <Sparkles className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">For You</span>
+              <span className="sm:hidden">Recommended</span>
               {recommendedUsers.length > 0 && (
-                <Badge variant="secondary" className="ml-1">
+                <Badge variant="secondary" className="ml-1 text-xs">
                   {recommendedUsers.length}
                 </Badge>
               )}
             </TabsTrigger>
-            <TabsTrigger value="new" className="gap-2">
-              <UserPlus className="h-4 w-4" />
+            <TabsTrigger value="new" className="gap-1 sm:gap-2 text-xs sm:text-sm">
+              <UserPlus className="h-3 w-3 sm:h-4 sm:w-4" />
               New Members
               {newUsers.length > 0 && (
-                <Badge variant="secondary" className="ml-1">
+                <Badge variant="secondary" className="ml-1 text-xs">
                   {newUsers.length}
                 </Badge>
               )}
@@ -128,7 +133,7 @@ export default function DiscoverPage() {
                   <Sparkles className="h-16 w-16 text-muted-foreground mb-4" />
                   <h3 className="text-lg font-semibold mb-2">No Recommendations Yet</h3>
                   <p className="text-muted-foreground text-center max-w-md">
-                    We couldn't find users with shared interests. Try adding more interests to your profile or check back later!
+                    We couldn&apos;t find users with shared interests. Try adding more interests to your profile or check back later!
                   </p>
                   <Button className="mt-6 cursor-pointer" onClick={() => window.location.href = '/setup/'}>
                     Update Interests
@@ -136,7 +141,7 @@ export default function DiscoverPage() {
                 </CardContent>
               </Card>
             ) : (
-              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
                 {recommendedUsers.map(user => (
                   <UserCard
                     key={user.id}
@@ -164,7 +169,7 @@ export default function DiscoverPage() {
                 </CardContent>
               </Card>
             ) : (
-              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
                 {newUsers.map(user => (
                   <UserCard
                     key={user.id}
