@@ -115,12 +115,18 @@
     --page-padding: 16px;
     --card-padding: 16px;
   }
+  main{
+    margin: 0 !important;
+  }
 }
 
 @media (max-width: 640px) {
   :root {
     --page-padding: 12px;
     --card-padding: 12px;
+  }
+  main{
+    margin: 0 !important;
   }
 }
 
@@ -173,8 +179,15 @@
     padding: var(--page-padding);
     margin-inline: auto;
     width: 100%;
-    overflow-x: hidden;
-    margin: 3rem;
+     overflow-x: hidden;
+    margin: 0;
+  }
+
+  /* On mobile when header is visible, add small top padding to prevent overlap */
+  @media (max-width: 767px) {
+    main {
+      padding-top: calc(var(--page-padding) + 4rem);
+    }
   }
 
   /* Cards: use CSS vars so padding and gaps scale fluidly */
