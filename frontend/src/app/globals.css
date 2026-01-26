@@ -4,6 +4,26 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
+  /* Standard gray palette (50-900) exposed as --color-gray-*/
+  --color-gray-50: #f9fafb;
+  --color-gray-100: #f3f4f6;
+  --color-gray-200: #e5e7eb;
+  --color-gray-300: #d1d5db;
+  --color-gray-400: #9ca3af;
+  --color-gray-500: #6b7280;
+  --color-gray-600: #4b5563;
+  --color-gray-700: #374151;
+  --color-gray-800: #1f2937;
+  --color-gray-900: #111827;
+  --color-gray-950: #030712;
+
+  /* Some common palettes (red, blue, green, yellow) */
+  --color-red-50: #fef2f2; --color-red-100: #fee2e2; --color-red-200: #fecaca; --color-red-300: #fca5a5; --color-red-400: #f87171; --color-red-500: #ef4444; --color-red-600: #dc2626; --color-red-700: #b91c1c; --color-red-800: #991b1b; --color-red-900: #7f1d1d;
+  --color-blue-50: #eff6ff; --color-blue-100: #dbeafe; --color-blue-200: #bfdbfe; --color-blue-300: #93c5fd; --color-blue-400: #60a5fa; --color-blue-500: #3b82f6; --color-blue-600: #2563eb; --color-blue-700: #1d4ed8; --color-blue-800: #1e40af; --color-blue-900: #1e3a8a;
+  --color-green-50: #f0fdf4; --color-green-100: #dcfce7; --color-green-200: #bbf7d0; --color-green-300: #86efac; --color-green-400: #4ade80; --color-green-500: #22c55e; --color-green-600: #16a34a; --color-green-700: #15803d; --color-green-800: #166534; --color-green-900: #14532d;
+  --color-yellow-50: #fefce8; --color-yellow-100: #fef9c3; --color-yellow-200: #fef08a; --color-yellow-300: #fde047; --color-yellow-400: #facc15; --color-yellow-500: #eab308; --color-yellow-600: #ca8a04; --color-yellow-700: #a16207; --color-yellow-800: #854d0e; --color-yellow-900: #713f12;
+
+  /* Keep existing theme mappings (preserve runtime variables) */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
@@ -81,6 +101,35 @@
   --sidebar-ring: oklch(0.708 0 0);
 }
 
+/* Layout variables for consistent sizing */
+:root {
+  --page-max-width: auto;
+  --page-padding: 24px;
+  --card-padding: 24px;
+  --card-gap: 1.5rem;
+}
+
+/* Responsive padding for smaller screens */
+@media (max-width: 768px) {
+  :root {
+    --page-padding: 16px;
+    --card-padding: 16px;
+  }
+  main{
+    margin: 0 !important;
+  }
+}
+
+@media (max-width: 640px) {
+  :root {
+    --page-padding: 12px;
+    --card-padding: 12px;
+  }
+  main{
+    margin: 0 !important;
+  }
+}
+
 .dark {
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
@@ -121,6 +170,81 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+
+  /* Make main content responsive using calc() and CSS variables */
+  main {
+    box-sizing: border-box;
+     max-width: var(--page-max-width); 
+    padding: var(--page-padding);
+    margin-inline: auto;
+    width: 100%;
+     overflow-x: hidden;
+    margin: 0;
+  }
+
+  /* On mobile when header is visible, add small top padding to prevent overlap */
+  @media (max-width: 767px) {
+    main {
+      padding-top: calc(var(--page-padding) + 4rem);
+    }
+  }
+
+  /* Cards: use CSS vars so padding and gaps scale fluidly */
+  [data-slot="card"] {
+    padding: 0;
+    gap: 0;
+    box-sizing: border-box;
+    width: 100%;
+    overflow: hidden;
+  }
+
+  /* [data-slot="card-header"],
+  [data-slot="card-content"],
+  [data-slot="card-footer"] {
+    padding: 1.5rem;
+    box-sizing: border-box;
+  } */
+  
+  /* [data-slot="card-header"] {
+    padding-bottom: 0.75rem;
+  } */
+
+  /* Custom scrollbar for heatmap calendar and scrollable containers (thin, GitHub-like) */
+  .overflow-x-auto::-webkit-scrollbar,
+  .overflow-y-auto::-webkit-scrollbar,
+  [data-slot="card-content"]::-webkit-scrollbar {
+    height: 6px;
+    width: 6px;
+  }
+
+  .overflow-x-auto::-webkit-scrollbar-track,
+  .overflow-y-auto::-webkit-scrollbar-track,
+  [data-slot="card-content"]::-webkit-scrollbar-track {
+    background: transparent;
+    border-radius: 4px;
+  }
+
+  .overflow-x-auto::-webkit-scrollbar-thumb,
+  .overflow-y-auto::-webkit-scrollbar-thumb,
+  [data-slot="card-content"]::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted-foreground) / 0.28);
+    border-radius: 999px;
+    transition: background 0.2s;
+  }
+
+  .overflow-x-auto::-webkit-scrollbar-thumb:hover,
+  .overflow-y-auto::-webkit-scrollbar-thumb:hover,
+  [data-slot="card-content"]::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground) / 0.5);
+  }
+
+  /* Firefox scrollbar styling */
+  .overflow-x-auto,
+  .overflow-y_auto,
+  [data-slot="card-content"] {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--muted-foreground) / 0.28) transparent;
   }
 }
 

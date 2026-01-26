@@ -14,19 +14,38 @@ function makeData(days = 365) {
 
 export const HeatMap = () => {
     const data = useMemo(() => makeData(365), [])
+    
+    // Custom color palette matching the image - green gradient from light to dark
+    const customPalette = [
+        '#28322a',      // Level 0 - dark background
+        '#0e4429',      // Level 1 - dark green
+        '#006d32',      // Level 2 - medium-dark green
+        '#26a641',      // Level 3 - medium green
+        '#39d353',      // Level 4 - bright green
+    ]
+    
     return (
         <HeatmapCalendar
             title="Activity"
             data={data}
             weekStartsOn={1}
-            legend={{ placement: "bottom" }}
+            palette={customPalette}
+            cellSize={14}
+            cellGap={3}
+            legend={{ 
+                placement: "bottom",
+                showText: true,
+                lessText: "Less",
+                moreText: "More"
+            }}
             axisLabels={{
                 showMonths: true,
                 showWeekdays: true,
-                weekdayIndices: [0, 1, 2, 3, 4, 5, 6], // show all weekday labels
+                weekdayIndices: [1, 3, 5], // Mon, Wed, Fri
                 monthFormat: "short",
-                minWeekSpacing: 3,
+                minWeekSpacing: 2,
             }}
+            className="w-full"
         />
     )
 }

@@ -94,30 +94,34 @@ export const HomeNotification = () => {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Notifications</CardTitle>
+    <Card className="h-full flex flex-col m-0 p-0 gap-0">
+      <CardHeader className="py-4 px-4">
+        <CardTitle className="text-base sm:text-lg">Notifications</CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="flex-1 px-0  mx-2 py-0 gap-0">
         {notifications.map((notif) => (
           <Item 
-            className={`cursor-pointer hover:bg-muted ${!notif.isRead ? 'bg-muted/40' : ''}`} 
+            className={`cursor-pointer hover:bg-muted mb-3 gap-0 p-0 rounded-lg transition-colors ${
+              !notif.isRead ? 'bg-muted/50 ' : ''
+            }`} 
             key={notif.id}
           >
-            <ItemContent>
+            <ItemContent className="p-3">
               <Link href={'/'} >
-                <div className='w-full flex'>
-                  <div className="">
-                    <Avatar className="h-10 w-10">
+                <div className='w-full flex items-center gap-3'>
+                  <div className="flex-shrink-0">
+                    <Avatar className="h-10 w-10 sm:h-12 sm:w-12">
                       <AvatarImage src={notif.imageUrl} />
                       <AvatarFallback>{notif.title[0]}</AvatarFallback>
                     </Avatar>
                   </div>
-                  <div className="ml-2">
-                    <ItemTitle className={!notif.isRead ? "font-bold" : ""}>
+                  <div className="flex-1 p-0">
+                    <ItemTitle className={`truncate text-sm sm:text-base ${
+                      !notif.isRead ? "font-bold" : ""
+                    }`}>
                         {notif.title}
                     </ItemTitle>
-                    <ItemDescription className="line-clamp-1">{notif.description}</ItemDescription>
+                    <ItemDescription className="line-clamp-1 text-xs sm:text-xs">{notif.description}</ItemDescription>
                   </div>
                 </div>
               </Link>

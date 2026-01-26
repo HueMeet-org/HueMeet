@@ -1,7 +1,7 @@
 "use client";
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Card, CardAction, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './ui/card'
-import { useEffect, useState } from 'react'
+import { Card, CardContent, CardHeader } from './ui/card'
+import { useEffect, useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client';
 import { Sparkles, Users } from 'lucide-react';
 import { UserProfileComplete } from '@/types/user';
@@ -10,7 +10,7 @@ export const UserHomeCard = () => {
     const [userData, setUserData] = useState<UserProfileComplete | null>(null);
     const supabase = createClient()
 
-    const getUserData = async () => {
+    const getUserData = useCallback(async () => {
         const { data: { user } } = await supabase.auth.getUser()
 
         // If no user is logged in at all, stop here
@@ -43,7 +43,7 @@ export const UserHomeCard = () => {
         }
 
         return { imageUrl, username, fullName, bio, interests_count, connections_count, aura }
-    }
+    }, [supabase])
 
     useEffect(() => {
         const fetchUser = async () => {
@@ -54,52 +54,52 @@ export const UserHomeCard = () => {
         };
 
         fetchUser();
-    }, []);
+    }, [getUserData]);
     return (
-        <Card className='w-full border-border/40 bg-card/50 backdrop-blur-sm'>
-            <CardHeader className="pb-3">
-                <div className="flex items-start gap-4">
-                    <Avatar className="h-14 w-14 border-2 border-primary/10">
+        <Card className='w-full border  bg-card/50 backdrop-blur-sm'>
+            <CardHeader className="pb-4">
+                <div className="flex flex-col sm:flex-row items-start gap-4">
+                    <Avatar className="h-16 w-16 sm:h-20 sm:w-20 border-2 border-primary/10">
                         <AvatarImage src={userData?.imageUrl} alt={userData?.username} />
-                        <AvatarFallback className="bg-primary/10 text-base font-semibold">
+                        <AvatarFallback className="bg-primary/10 text-lg sm:text-xl font-semibold">
                             {userData?.fullName?.charAt(0) || 'U'}
                         </AvatarFallback>
                     </Avatar>
-                    <div className="flex-1 min-w-0">
-                        <h3 className="text-lg font-semibold leading-tight truncate">
+                    <div className="flex-1 min-w-0 w-full">
+                        <h3 className="text-xl sm:text-2xl font-bold leading-tight truncate">
                             {userData?.fullName || 'Loading...'}
                         </h3>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-sm sm:text-base text-muted-foreground">
                             @{userData?.username || 'username'}
                         </p>
+                        {userData?.bio && (
+                            <p className="text-sm text-muted-foreground/80 mt-2 line-clamp-2">
+                                {userData.bio}
+                            </p>
+                        )}
                     </div>
                 </div>
-                {userData?.bio && (
-                    <p className="text-sm text-muted-foreground/80 mt-1 line-clamp-2">
-                        {userData.bio}
-                    </p>
-                )}
             </CardHeader>
             
             <CardContent className="pt-0 pb-4">
-                <div className="flex gap-3">
-                    <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-accent border-accent flex-1">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-full grayscale">
-                            <Sparkles className="h-4 w-4 text-accent-foreground dark:text-accent-foreground" />
+                <div className="flex flex-col md:flex-row items-start md:justify-start gap-3 md:gap-6">
+                    <div className="w-full md:flex-shrink-0 flex items-center gap-3 p-3 sm:p-4 rounded-lg bg-accent border-accent border" style={{ width: 'clamp(180px, 18vw, 260px)' }}>
+                        <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-full bg-yellow-400/20">
+                            <Sparkles className="h-5 w-5 sm:h-6 sm:w-6 text-accent-foreground dark:text-accent-foreground" />
                         </div>
-                        <div>
+                        <div className="min-w-0">
                             <p className="text-xs text-muted-foreground">Aura</p>
-                            <p className="text-base font-semibold">{userData?.aura?.toLocaleString() || '0'}</p>
+                            <p className="text-lg sm:text-xl font-bold truncate">{userData?.aura?.toLocaleString() || '0'}</p>
                         </div>
                     </div>
                     
-                    <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-blue-500/10 border border-blue-500/20 flex-1">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-500/20">
-                            <Users className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                    <div className="w-full md:flex-shrink-0 flex items-center gap-3 p-3 sm:p-4 rounded-lg bg-blue-500/10 border border-blue-500/20" style={{ width: 'clamp(180px, 18vw, 260px)' }}>
+                        <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-full bg-blue-500/20">
+                            <Users className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600 dark:text-blue-400" />
                         </div>
-                        <div>
+                        <div className="min-w-0">
                             <p className="text-xs text-muted-foreground">Connections</p>
-                            <p className="text-base font-semibold">{userData?.connections_count?.toLocaleString() || '0'}</p>
+                            <p className="text-lg sm:text-xl font-bold truncate">{userData?.connections_count?.toLocaleString() || '0'}</p>
                         </div>
                     </div>
                 </div>

@@ -104,25 +104,25 @@ export const HomeRecommendedMatch = () => {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Recommended Matches</CardTitle>
+    <Card className="h-full flex flex-col m-0 p-0 gap-0">
+      <CardHeader className="py-4 px-4">
+        <CardTitle className="text-base sm:text-lg">Recommended Matches</CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="flex-1 px-0  mx-2 py-0 gap-0">
         {matches.map((user) => (
-          <Item className='cursor-pointer hover:bg-muted' key={user.username}>
-            <ItemContent>
+          <Item className='cursor-pointer gap-0 p-0 hover:bg-muted rounded-lg transition-colors' key={user.username}>
+            <ItemContent className="p-3">
               <Link href={`/profile/${user.username}`} >
-                <div className='w-full flex'>
-                  <div className="">
-                    <Avatar className="h-10 w-10">
+                <div className='w-full flex items-center gap-3'>
+                  <div className="flex-shrink-0">
+                    <Avatar className="h-10 w-10 sm:h-12 sm:w-12">
                       <AvatarImage src={user.imageUrl} />
                       <AvatarFallback>{user.fullName[0]}</AvatarFallback>
                     </Avatar>
                   </div>
-                  <div className="ml-2">
-                    <ItemTitle>{user.fullName}</ItemTitle>
-                    <ItemDescription className="line-clamp-1">{user.bio}</ItemDescription>
+                  <div className="flex-1 p-0">
+                    <ItemTitle className="truncate text-sm sm:text-base">{user.fullName}</ItemTitle>
+                    <ItemDescription className="line-clamp-1 text-xs sm:text-xs">{user.bio}</ItemDescription>
                   </div>
                 </div>
               </Link>
