@@ -9,72 +9,78 @@ import Link from 'next/link'
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyTitle } from './ui/empty'
 import { Skeleton } from './ui/skeleton'
 import { cn } from '@/lib/utils'
+import { getActiveConnections } from '@/lib/connections/service'
+import { createClient } from '@/lib/supabase/client'
 
-export const recentConnectionsMock: ConnectedUsers[] = [
-  {
-    id: "rc_1",
-    userId: "u_101",
-    name: "Aarav Sharma",
-    username: "aarav_s",
-    avatarUrl: "https://i.pravatar.cc/150?img=11",
-    lastMessage: "Did you check the docs I sent?",
-    lastMessageAt: "2026-01-20T08:42:00Z",
-    unreadCount: 2,
-    presence: "online",
-  },
-  {
-    id: "rc_2",
-    userId: "u_102",
-    name: "Neha Verma",
-    username: "neha_v",
-    avatarUrl: "https://i.pravatar.cc/150?img=32",
-    lastMessage: "Okay, sounds good 👍",
-    lastMessageAt: "2026-01-20T07:58:00Z",
-    unreadCount: 0,
-    presence: "away",
-  },
-  {
-    id: "rc_3",
-    userId: "u_103",
-    name: "Rohan Mehta",
-    username: "rohan_m",
-    avatarUrl: "https://i.pravatar.cc/150?img=45",
-    lastMessage: "Let’s sync after lunch",
-    lastMessageAt: "2026-01-19T18:21:00Z",
-    unreadCount: 62,
-    presence: "typing",
-  },
-  {
-    id: "rc_4",
-    userId: "u_104",
-    name: "Priya Singh",
-    username: "priya_s",
-    avatarUrl: "https://i.pravatar.cc/150?img=28",
-    lastMessage: "Thanks! That helped a lot",
-    lastMessageAt: "2026-01-19T16:05:00Z",
-    unreadCount: 0,
-    presence: "offline",
-  },
-  {
-    id: "rc_5",
-    userId: "u_105",
-    name: "Kunal Patel",
-    username: "kunal_p",
-    avatarUrl: "https://i.pravatar.cc/150?img=53",
-    lastMessage: "Can we move this to tomorrow?",
-    lastMessageAt: "2026-01-18T21:47:00Z",
-    unreadCount: 4,
-    presence: "online",
-  },
-]
+// export const recentConnectionsMock: ConnectedUsers[] = [
+//   {
+//     id: "rc_1",
+//     name: "Aarav Sharma",
+//     username: "aarav_s",
+//     avatarUrl: "https://i.pravatar.cc/150?img=11",
+//     lastMessage: "Did you check the docs I sent?",
+//     lastMessageAt: "2026-01-20T08:42:00Z",
+//     unreadCount: 2,
+//     presence: "online",
+//   },
+//   {
+//     id: "rc_2",
+//     name: "Neha Verma",
+//     username: "neha_v",
+//     avatarUrl: "https://i.pravatar.cc/150?img=32",
+//     lastMessage: "Okay, sounds good 👍",
+//     lastMessageAt: "2026-01-20T07:58:00Z",
+//     unreadCount: 0,
+//     presence: "away",
+//   },
+//   {
+//     id: "rc_3",
+//     name: "Rohan Mehta",
+//     username: "rohan_m",
+//     avatarUrl: "https://i.pravatar.cc/150?img=45",
+//     lastMessage: "Let’s sync after lunch",
+//     lastMessageAt: "2026-01-19T18:21:00Z",
+//     unreadCount: 62,
+//     presence: "typing",
+//   },
+//   {
+//     id: "rc_4",
+//     name: "Priya Singh",
+//     username: "priya_s",
+//     avatarUrl: "https://i.pravatar.cc/150?img=28",
+//     lastMessage: "Thanks! That helped a lot",
+//     lastMessageAt: "2026-01-19T16:05:00Z",
+//     unreadCount: 0,
+//     presence: "offline",
+//   },
+//   {
+//     id: "rc_5",
+//     name: "Kunal Patel",
+//     username: "kunal_p",
+//     avatarUrl: "https://i.pravatar.cc/150?img=53",
+//     lastMessage: "Can we move this to tomorrow?",
+//     lastMessageAt: "2026-01-18T21:47:00Z",
+//     unreadCount: 4,
+//     presence: "online",
+//   },
+// ]
 
 export const HomeConnections = () => {
   const [connections, setConnections] = useState<ConnectedUsers[]>();
   const [loading, setLoading] = useState(true);
+  const supabase = createClient();
 
   useEffect(() => {
-    setConnections(recentConnectionsMock);
-    setLoading(false);
+    const getActiveConnectionsData = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        const connectedUsers = await getActiveConnections(user.id);
+        setConnections(connectedUsers);
+        setLoading(false);
+      }
+    }
+
+    getActiveConnectionsData();
   }, [])
 
   if (loading) {
@@ -124,7 +130,7 @@ export const HomeConnections = () => {
             <ItemContent className="p-3">
               <Link href={`/profile/${user.username}`} >
                 <div className='w-full flex items-center gap-3'>
-                  <div className="relative flex-shrink-0">
+                  <div className="relative shrink-0">
                     <Avatar className="h-10 w-10 sm:h-12 sm:w-12">
                       <AvatarImage src={user.avatarUrl} />
                       <AvatarFallback>{user.name[0]}</AvatarFallback>
