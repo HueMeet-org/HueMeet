@@ -1,5 +1,6 @@
-import { createClient } from '@/lib/supabase/client'
-import { ConnectedUsers, UserPresence } from '@/types/user'
+import { createClient } from '@/lib/supabase/client';
+import { ConnectedUsers, UserPresence } from '@/types/user';
+import { isUserOnline } from '../presence/service';
 
 export type ConnectionRequest = {
   id: string
@@ -175,8 +176,6 @@ export async function getActiveConnections(userId: string): Promise<ConnectedUse
     throw error
   }
 
-  console.log('Connections data:', data);
-
   // return after formatting into ConnectedUsers type
   const new_data: ConnectedUsers[] = data!.map(conn => {
     const sender = Array.isArray(conn.sender) ? conn.sender[0] : conn.sender
@@ -201,7 +200,7 @@ export async function getActiveConnections(userId: string): Promise<ConnectedUse
       lastMessage: lastMessage?.content || undefined,
       lastMessageAt: lastMessage?.created_at || conn.updated_at || conn.created_at as string,
       unreadCount,
-      presence: 'offline' as UserPresence
+      presence: 'offline'
     };
   });
 

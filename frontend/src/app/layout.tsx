@@ -5,6 +5,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { Toaster } from "sonner";
+import { PresenceTracker } from "@/components/presence-tracker";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -39,13 +40,14 @@ export default function RootLayout({
         >
           <SidebarProvider>
             {/* Mobile/tablet top bar - fixed at viewport top */}
-            <div className="fixed top-0 left-0 right-0 z-50 md:hidden flex items-center gap-2 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-4">
+            <div className="fixed top-0 left-0 right-0 z-50 md:hidden flex items-center gap-2 border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60 p-4">
               <SidebarTrigger />
               <h1 className="text-lg font-semibold">Hue<span className="font-extrabold">Meet</span></h1>
             </div>
 
             <AppSidebar />
             <main className="w-full min-h-screen mx-4 my-12 mt-18 sm:mt-8 sm:mx-8 sm:my-8">
+              <PresenceTracker />
               {children}
             </main>
             <Toaster />
