@@ -163,18 +163,19 @@ export async function getActiveConnections(userId: string): Promise<ConnectedUse
       receiver_id,
       sender:profiles!sender_id(id, full_name, username, avatar_url),
       receiver:profiles!receiver_id(id, full_name, username, avatar_url),
-      messages(content, created_at, is_read, receiver_id),
+      messages!messages_connection_id_fkey(content, created_at, is_read, receiver_id),
       created_at,
       updated_at
     `)
     .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
     .eq('status', 'accepted')
-    .order('created_at', { ascending: false })
     .limit(1, { foreignTable: 'messages' })
 
   if (error) {
     throw error
   }
+
+  console.log('Connections data:', data);
 
   // return after formatting into ConnectedUsers type
   const new_data: ConnectedUsers[] = data!.map(conn => {
@@ -185,6 +186,7 @@ export async function getActiveConnections(userId: string): Promise<ConnectedUse
     const otherUser = isUserSender ? receiver : sender
 
     const messages = Array.isArray(conn.messages) ? conn.messages : (conn.messages ? [conn.messages] : [])
+    messages.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
     const lastMessage = messages[0] || undefined
 
     const unreadCount = messages.filter(
@@ -197,11 +199,13 @@ export async function getActiveConnections(userId: string): Promise<ConnectedUse
       username: otherUser.username as string,
       avatarUrl: otherUser.avatar_url as string | undefined,
       lastMessage: lastMessage?.content || undefined,
-      lastMessageAt: conn.updated_at || conn.created_at as string,
+      lastMessageAt: lastMessage?.created_at || conn.updated_at || conn.created_at as string,
       unreadCount,
       presence: 'offline' as UserPresence
     };
   });
+
+  new_data.sort((a, b) => new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime())
 
   return new_data;
 }
