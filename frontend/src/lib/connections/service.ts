@@ -164,13 +164,12 @@ export async function getActiveConnections(userId: string): Promise<ConnectedUse
       receiver_id,
       sender:profiles!sender_id(id, full_name, username, avatar_url),
       receiver:profiles!receiver_id(id, full_name, username, avatar_url),
-      messages!messages_connection_id_fkey(content, created_at, is_read, receiver_id),
+      messages!messages_connection_id_fkey(content, created_at, is_read, sender_id, receiver_id),
       created_at,
       updated_at
     `)
     .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
     .eq('status', 'accepted')
-    .limit(1, { foreignTable: 'messages' })
 
   if (error) {
     throw error
