@@ -4,11 +4,11 @@ drop trigger if exists "update_conversations_updated_at" on "public"."conversati
 
 drop trigger if exists "update_profiles_updated_at" on "public"."profiles";
 
+drop policy "Users can view conversations they are part of" on "public"."conversations";
+
 drop policy "Users can add participants to conversations" on "public"."conversation_participants";
 
 drop policy "Users can view participants of their conversations" on "public"."conversation_participants";
-
-drop policy "Users can view conversations they are part of" on "public"."conversations";
 
 drop policy "insert own messages" on "public"."messages";
 
@@ -74,6 +74,15 @@ create or replace view "public"."user_profiles_complete" as  SELECT id,
 
 
 
+  create policy "read own conversations"
+  on "public"."conversations"
+  as permissive
+  for select
+  to public
+using (public.is_conversation_participant(id, auth.uid()));
+
+
+
   create policy "Users can add participants to conversations"
   on "public"."conversation_participants"
   as permissive
@@ -93,17 +102,6 @@ with check ((EXISTS ( SELECT 1
 using ((EXISTS ( SELECT 1
    FROM public.conversation_participants cp
   WHERE ((cp.conversation_id = conversation_participants.conversation_id) AND (cp.user_id = auth.uid())))));
-
-
-
-  create policy "Users can view conversations they are part of"
-  on "public"."conversations"
-  as permissive
-  for select
-  to public
-using ((EXISTS ( SELECT 1
-   FROM public.conversation_participants
-  WHERE ((conversation_participants.conversation_id = conversations.id) AND (conversation_participants.user_id = auth.uid())))));
 
 
 
@@ -133,6 +131,5 @@ CREATE TRIGGER update_profiles_updated_at BEFORE UPDATE ON public.profiles FOR E
 drop trigger if exists "on_auth_user_created" on "auth"."users";
 
 CREATE TRIGGER on_auth_user_created AFTER INSERT ON auth.users FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
-
 
 

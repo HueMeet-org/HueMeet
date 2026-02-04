@@ -25,6 +25,7 @@ export interface ConnectedUsers {
   lastMessage?: string
   lastMessageAt: string
   unreadCount: number
+  conversationId: string
 
   presence: UserPresence
 }

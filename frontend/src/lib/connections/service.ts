@@ -169,14 +169,14 @@ export async function getActiveConnections(userId: string): Promise<ConnectedUse
       updated_at
     `)
     .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
-    .eq('status', 'accepted')
+    .eq('status', 'accepted');
 
   if (error) {
     throw error
   }
 
   // return after formatting into ConnectedUsers type
-  const new_data: ConnectedUsers[] = data!.map(conn => {
+  const new_data: ConnectedUsers[] = await Promise.all(data!.map(async conn => {
     const sender = Array.isArray(conn.sender) ? conn.sender[0] : conn.sender
     const receiver = Array.isArray(conn.receiver) ? conn.receiver[0] : conn.receiver
 
@@ -189,7 +189,34 @@ export async function getActiveConnections(userId: string): Promise<ConnectedUse
 
     const unreadCount = messages.filter(
       msg => !msg.is_read && msg.receiver_id === userId
-    ).length
+    ).length;
+
+    const { data: conversationData, error: conversationError } = await supabase
+      .from('conversations')
+      .select('id')
+      .eq('connection_id', conn.id)
+
+    if (conversationError) {
+      throw conversationError
+    }
+
+    // Getting conversation id - create one if it doesn't exist
+    let conversationId = conversationData?.[0]?.id;
+
+    if (!conversationId) {
+      // Auto-create conversation for this connection
+      const { data: newConversation, error: createError } = await supabase
+        .from('conversations')
+        .insert({ connection_id: conn.id })
+        .select('id')
+        .single();
+
+      if (createError) {
+        console.error('Error creating conversation:', createError);
+      } else {
+        conversationId = newConversation?.id;
+      }
+    }
 
     return {
       id: otherUser.id as string,
@@ -199,9 +226,10 @@ export async function getActiveConnections(userId: string): Promise<ConnectedUse
       lastMessage: lastMessage?.content || undefined,
       lastMessageAt: lastMessage?.created_at || conn.updated_at || conn.created_at as string,
       unreadCount,
+      conversationId: conversationId || "",
       presence: 'offline'
     };
-  });
+  }));
 
   new_data.sort((a, b) => new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime())
 

@@ -4,11 +4,13 @@ drop trigger if exists "update_conversations_updated_at" on "public"."conversati
 
 drop trigger if exists "update_profiles_updated_at" on "public"."profiles";
 
+drop policy "create conversations" on "public"."conversations";
+
 drop policy "Users can add participants to conversations" on "public"."conversation_participants";
 
 drop policy "Users can view participants of their conversations" on "public"."conversation_participants";
 
-drop policy "Users can view conversations they are part of" on "public"."conversations";
+drop policy "read own conversations" on "public"."conversations";
 
 drop policy "insert own messages" on "public"."messages";
 
@@ -56,6 +58,22 @@ alter table "public"."user_interests" add constraint "user_interests_interest_id
 
 alter table "public"."user_interests" validate constraint "user_interests_interest_id_fkey";
 
+set check_function_bodies = off;
+
+CREATE OR REPLACE FUNCTION public.can_create_conversation(conn_id uuid, uid uuid)
+ RETURNS boolean
+ LANGUAGE sql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+  SELECT EXISTS (
+    SELECT 1 FROM connections 
+    WHERE id = conn_id 
+    AND (sender_id = uid OR receiver_id = uid)
+  );
+$function$
+;
+
 create or replace view "public"."user_profiles_complete" as  SELECT id,
     full_name,
     username,
@@ -71,6 +89,15 @@ create or replace view "public"."user_profiles_complete" as  SELECT id,
            FROM public.connections c
           WHERE (((p.id = c.sender_id) OR (p.id = c.receiver_id)) AND (c.status = 'accepted'::text))) AS connections_count
    FROM public.profiles p;
+
+
+
+  create policy "create conversations for own connections"
+  on "public"."conversations"
+  as permissive
+  for insert
+  to authenticated
+with check (public.can_create_conversation(connection_id, auth.uid()));
 
 
 
@@ -96,14 +123,12 @@ using ((EXISTS ( SELECT 1
 
 
 
-  create policy "Users can view conversations they are part of"
+  create policy "read own conversations"
   on "public"."conversations"
   as permissive
   for select
   to public
-using ((EXISTS ( SELECT 1
-   FROM public.conversation_participants
-  WHERE ((conversation_participants.conversation_id = conversations.id) AND (conversation_participants.user_id = auth.uid())))));
+using (public.is_conversation_participant(id, auth.uid()));
 
 
 
@@ -133,6 +158,5 @@ CREATE TRIGGER update_profiles_updated_at BEFORE UPDATE ON public.profiles FOR E
 drop trigger if exists "on_auth_user_created" on "auth"."users";
 
 CREATE TRIGGER on_auth_user_created AFTER INSERT ON auth.users FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
-
 
 
