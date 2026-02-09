@@ -16,7 +16,7 @@ TOXIC_MODEL_NAME = "unitary/unbiased-toxic-roberta"
 toxic_tokenizer = AutoTokenizer.from_pretrained(TOXIC_MODEL_NAME)
 toxic_model = AutoModelForSequenceClassification.from_pretrained(TOXIC_MODEL_NAME)
 toxic_pipeline = TextClassificationPipeline(
-    model=toxic_model, tokenizer=toxic_tokenizer, return_all_scores=True
+    model=toxic_model, tokenizer=toxic_tokenizer
 )
 
 # Configurations for emotion model
@@ -24,7 +24,7 @@ EMOTION_MODEL_NAME = "SamLowe/roberta-base-go_emotions"
 emotion_tokenizer = AutoTokenizer.from_pretrained(EMOTION_MODEL_NAME)
 emotion_model = AutoModelForSequenceClassification.from_pretrained(EMOTION_MODEL_NAME)
 emotion_pipeline = TextClassificationPipeline(
-    model=emotion_model, tokenizer=emotion_tokenizer, return_all_scores=True
+    model=emotion_model, tokenizer=emotion_tokenizer
 )
 
 
@@ -124,7 +124,6 @@ def analyze_aura(request: AuraAnalysisRequest) -> AuraAnalysisResponse:
         AuraAnalysisResponse with toxicity analysis and aura score
     """
     try:
-        print(f"Request started: {datetime.datetime.now().strftime('%H:%M:%S.%f')}")
         toxicity = analyze_toxicity(request.text)
         emotion = analyze_emotion(request.text)
 
