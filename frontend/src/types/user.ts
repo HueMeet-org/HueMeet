@@ -18,7 +18,6 @@ export type UserPresence = "online" | "offline" | "away" | "typing"
 
 export interface ConnectedUsers {
   id: string
-  userId: string
   name: string
   username: string
   avatarUrl?: string
@@ -26,6 +25,7 @@ export interface ConnectedUsers {
   lastMessage?: string
   lastMessageAt: string
   unreadCount: number
+  conversationId: string
 
   presence: UserPresence
 }
