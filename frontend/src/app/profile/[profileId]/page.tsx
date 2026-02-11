@@ -36,6 +36,7 @@ const dummyAllInterests: Interest[] = [
 // false user data
 const fakeUserData: UserProfileComplete = {
   imageUrl: "https://picsum.photos/200",
+  coverUrl: "",
   fullName: "John Doe",
   username: "johndoe",
   bio: "Lorem ipsum dolor, sit amet consectetur adipisicing elit. Enim, totam dolorem corporis deleniti eaque id eligendi architecto natus ullam repudiandae. Minima optio quasi numquam quibusdam odio veritatis consectetur, exercitationem ipsa.",
@@ -48,12 +49,14 @@ export default function Profile({ params }: ProfilePageProps) {
   const [userData, setUserData] = useState<UserProfileComplete | null>(null);
   const [isOwner, setIsOwner] = useState(false);
   const [isHoveringAvatar, setIsHoveringAvatar] = useState(false);
+  const [isHoveringBanner, setIsHoveringBanner] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isEditingInterests, setIsEditingInterests] = useState(false);
   const [editedData, setEditedData] = useState<Partial<UserProfileComplete>>({});
   const [userInterests, setUserInterests] = useState<Set<string>>(new Set(['1', '3', '5'])); // Dummy selected interests
   const [tempInterests, setTempInterests] = useState<Set<string>>(new Set());
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const coverInputRef = React.useRef<HTMLInputElement>(null);
   const supabase = createClient();
   const profile = React.use(params);
   const profileId = profile.profileId;
@@ -99,6 +102,25 @@ export default function Profile({ params }: ProfilePageProps) {
 
     // TODO: Upload the image to Supabase Storage
   };
+
+    const handleCoverChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        if (userData) {
+          setUserData({
+            ...userData,
+            // set preview cover URL
+            coverUrl: reader.result as string
+          });
+        }
+      };
+      reader.readAsDataURL(file);
+
+      // TODO: Upload the cover image to Supabase Storage and update profile
+    };
 
   const handleEditToggle = () => {
     if (isEditing) {
@@ -176,7 +198,36 @@ export default function Profile({ params }: ProfilePageProps) {
     <div className="w-full max-w-4xl mx-auto">
       <Card className='p-0'>
         {/* Banner - 4:1 aspect ratio */}
-        <div className="relative w-full bg-accent" style={{ aspectRatio: '4/1' }}>
+        <div
+          className="relative w-full bg-accent"
+          style={{
+            aspectRatio: '4/1',
+            backgroundImage: userData?.coverUrl ? `url('${userData.coverUrl}')` : undefined,
+            backgroundSize: userData?.coverUrl ? 'cover' : undefined,
+            backgroundPosition: userData?.coverUrl ? 'center' : undefined,
+          }}
+          onMouseEnter={() => setIsHoveringBanner(true)}
+          onMouseLeave={() => setIsHoveringBanner(false)}
+        >
+          {/* Cover edit overlay - only shows for owner */}
+          {isOwner && (
+            <div
+              className={`absolute right-4 top-4 rounded-md p-1 bg-black/40 text-white cursor-pointer transition-opacity duration-200 ${isHoveringBanner ? 'opacity-100' : 'opacity-0'}`}
+              onClick={() => coverInputRef.current?.click()}
+            >
+              <PencilIcon className="w-5 h-5" />
+            </div>
+          )}
+
+          {/* Hidden cover file input */}
+          <input
+            ref={coverInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleCoverChange}
+          />
+
           {/* Profile Photo - Positioned half in/out of banner */}
           <div
             className="absolute left-6 sm:left-8 md:left-12 bottom-0 translate-y-1/2 group"

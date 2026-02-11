@@ -73,18 +73,23 @@ export function NavUser({
                         sideOffset={4}
                     >
                         <DropdownMenuLabel className="p-0 font-normal">
-                            <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-                                <Avatar className="h-8 w-8 rounded-lg">
-                                    <AvatarImage src={user?.imageUrl} alt={user?.username} />
-                                    <AvatarFallback className="rounded-lg">CN</AvatarFallback>
-                                </Avatar>
-                                <div className="grid flex-1 text-left text-sm leading-tight">
-                                    <span className="truncate font-medium">{user?.fullName}</span>
-                                    <span className="text-muted-foreground truncate text-xs">
-                                        {user?.username}
-                                    </span>
+                            <Link
+                                href={`/profile/${user?.username ?? ""}`}
+                                className="no-underline block w-full"
+                            >
+                                <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm cursor-pointer">
+                                    <Avatar className="h-8 w-8 rounded-lg">
+                                        <AvatarImage src={user?.imageUrl} alt={user?.username} />
+                                        <AvatarFallback className="rounded-lg">CN</AvatarFallback>
+                                    </Avatar>
+                                    <div className="grid flex-1 text-left text-sm leading-tight">
+                                        <span className="truncate font-medium">{user?.fullName}</span>
+                                        <span className="text-muted-foreground truncate text-xs">
+                                            {user?.username}
+                                        </span>
+                                    </div>
                                 </div>
-                            </div>
+                            </Link>
                         </DropdownMenuLabel>
                         <DropdownMenuSeparator />
                         <DropdownMenuGroup>

@@ -11,7 +11,8 @@ export interface UserProfileComplete {
     bio: string;
     interests_count: number;
     connections_count: number;
-    aura: number;
+  aura: number;
+  coverUrl?: string;
 }
 
 export type UserPresence = "online" | "offline" | "away" | "typing"
