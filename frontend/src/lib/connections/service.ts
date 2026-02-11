@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/client';
 import { ConnectedUsers, UserPresence } from '@/types/user';
 import { isUserOnline } from '../presence/service';
+import { createConversationParticipant } from '../messages/service';
 
 export type ConnectionRequest = {
   id: string
@@ -164,7 +165,6 @@ export async function getActiveConnections(userId: string): Promise<ConnectedUse
       receiver_id,
       sender:profiles!sender_id(id, full_name, username, avatar_url),
       receiver:profiles!receiver_id(id, full_name, username, avatar_url),
-      messages!messages_connection_id_fkey(content, created_at, is_read, sender_id, receiver_id),
       created_at,
       updated_at
     `)
@@ -177,27 +177,19 @@ export async function getActiveConnections(userId: string): Promise<ConnectedUse
 
   // return after formatting into ConnectedUsers type
   const new_data: ConnectedUsers[] = await Promise.all(data!.map(async conn => {
-    const sender = Array.isArray(conn.sender) ? conn.sender[0] : conn.sender
-    const receiver = Array.isArray(conn.receiver) ? conn.receiver[0] : conn.receiver
+    const sender = Array.isArray(conn.sender) ? conn.sender[0] : conn.sender;
+    const receiver = Array.isArray(conn.receiver) ? conn.receiver[0] : conn.receiver;
 
-    const isUserSender = conn.sender_id === userId
-    const otherUser = isUserSender ? receiver : sender
-
-    const messages = Array.isArray(conn.messages) ? conn.messages : (conn.messages ? [conn.messages] : [])
-    messages.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-    const lastMessage = messages[0] || undefined
-
-    const unreadCount = messages.filter(
-      msg => !msg.is_read && msg.receiver_id === userId
-    ).length;
+    const isUserSender = conn.sender_id === userId;
+    const otherUser = isUserSender ? receiver : sender;
 
     const { data: conversationData, error: conversationError } = await supabase
       .from('conversations')
       .select('id')
-      .eq('connection_id', conn.id)
+      .eq('connection_id', conn.id);
 
     if (conversationError) {
-      throw conversationError
+      throw conversationError;
     }
 
     // Getting conversation id - create one if it doesn't exist
@@ -205,18 +197,66 @@ export async function getActiveConnections(userId: string): Promise<ConnectedUse
 
     if (!conversationId) {
       // Auto-create conversation for this connection
+      // Auto-create conversation for this connection
       const { data: newConversation, error: createError } = await supabase
         .from('conversations')
         .insert({ connection_id: conn.id })
         .select('id')
         .single();
 
+      if (newConversation) {
+        conversationId = newConversation.id;
+      }
+
       if (createError) {
         console.error('Error creating conversation:', createError);
-      } else {
-        conversationId = newConversation?.id;
       }
     }
+
+    // create participation record if it doesn't exist
+    if (conversationId) {
+      const { data: participant } = await supabase
+        .from("conversation_participants")
+        .select("id")
+        .eq("conversation_id", conversationId)
+        .eq("user_id", userId)
+        .single();
+
+      if (!participant) {
+        await createConversationParticipant(conversationId, userId);
+      }
+    }
+
+    // If conversationId is still null here (creation failed), we can't fetch messages properly.
+    if (!conversationId) {
+      console.error('No conversation ID for connection', conn.id);
+      return {
+        id: otherUser.id as string,
+        name: otherUser.full_name as string,
+        username: otherUser.username as string,
+        avatarUrl: otherUser.avatar_url as string | undefined,
+        lastMessage: undefined,
+        lastMessageAt: conn.updated_at || conn.created_at as string,
+        unreadCount: 0,
+        conversationId: "",
+        presence: 'offline'
+      };
+    }
+
+    const { data: messages, error: messagesError } = await supabase
+      .from('messages')
+      .select(`*`)
+      .eq('conversation_id', conversationId);
+
+    if (messagesError) {
+      throw messagesError;
+    }
+    messages.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    const lastMessage = messages[0] || undefined;
+
+    const unreadCount = messages.filter(
+      msg => !msg.is_read && msg.receiver_id === userId
+    ).length;
 
     return {
       id: otherUser.id as string,
@@ -231,7 +271,7 @@ export async function getActiveConnections(userId: string): Promise<ConnectedUse
     };
   }));
 
-  new_data.sort((a, b) => new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime())
+  new_data.sort((a, b) => new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime());
 
   return new_data;
 }
