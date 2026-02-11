@@ -46,7 +46,7 @@ export default function RootLayout({
             </div>
 
             <AppSidebar />
-            <main className="w-full min-h-screen mx-4 my-12 mt-18 sm:mt-8 sm:mx-8 sm:my-8">
+            <main className="w-full min-h-screen">
               <PresenceTracker />
               {children}
             </main>

@@ -88,8 +88,8 @@ export default function Messages() {
 }
 
 function ConnectionItem({ user }: { user: ConnectedUsers }) {
-    const isOnline = useUserPresence(user.username)
-    const presence = (isOnline ? 'online' : 'offline') as ConnectedUsers['presence']
+    const isOnline = useUserPresence(user.username);
+    const presence = (isOnline ? 'online' : 'offline') as ConnectedUsers['presence'];
 
     return (
         <Item className='cursor-pointer gap-0 p-0 hover:bg-muted/50 border-b last:border-0 rounded-none transition-colors'>
