@@ -4,6 +4,7 @@ export interface Message {
     senderId: string;
     receiverId: string;
     content: string;
+    iv: string;
     createdAt: string;
     isRead: boolean;
     isMessageFromCurrentUser: boolean;

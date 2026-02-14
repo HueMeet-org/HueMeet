@@ -1,5 +1,6 @@
 "use client";
 import { cn } from "@/lib/utils"
+import { initializeUserKeys } from "@/lib/userKeyManager";
 import { Button } from "@/components/ui/button"
 import {
     Card,
@@ -58,6 +59,9 @@ export function LoginForm({
             if (error) {
                 toast.error(`Error: ${error.message}`);
             } else {
+                if (data.user?.id) {
+                    await initializeUserKeys(data.user.id);
+                }
                 toast.success('Login successful!');
                 router.push('/');
             }

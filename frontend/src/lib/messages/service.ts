@@ -1,5 +1,7 @@
 import { Message, ConversationParticipant } from "@/types/messages";
 import { createClient } from "../supabase/client";
+import { getSharedKeyForChat } from "../userKeyManager";
+import { decryptMessage, encryptMessage } from "../encryption";
 
 
 export async function getParticipant(conversationId: string, userId: string): Promise<ConversationParticipant | null> {
@@ -50,7 +52,16 @@ export async function getMessages(conversationId: string, userId: string): Promi
 
     const { data, error } = await supabase
         .from("messages")
-        .select("*")
+        .select(`
+            id,
+            conversation_id,
+            sender_id,
+            receiver_id,
+            content,
+            iv,
+            created_at,
+            is_read
+        `)
         .eq("conversation_id", conversationId)
         .order("created_at", { ascending: true });
 
@@ -58,17 +69,13 @@ export async function getMessages(conversationId: string, userId: string): Promi
         throw error;
     }
 
-    // map the data to Message type
-    const messages = data.map((msg) => ({
-        id: msg.id,
-        conversationId: msg.conversation_id,
-        senderId: msg.sender_id,
-        receiverId: msg.receiver_id,
-        content: msg.content,
-        createdAt: msg.created_at,
-        isRead: msg.is_read,
-        isMessageFromCurrentUser: msg.sender_id === userId,
-    }));
+    if (!data || data.length === 0) {
+        return [];
+    }
+
+    // map the data using row to messages
+    // this also decrypts the message content
+    const messages = await Promise.all(data.map(async (row) => await mapRowToMessage(row, userId)));
 
     return messages;
 }
@@ -104,6 +111,22 @@ export async function sendMessage(
     content: string
 ): Promise<Message> {
     const supabase = createClient();
+    // Get shared key for THIS specific chat
+    let sharedKey: CryptoKey | null = null;
+    try {
+        sharedKey = await getSharedKeyForChat(senderId, receiverId);
+    } catch (e) {
+        console.warn("Encryption keys missing, sending unencrypted message:", e);
+    }
+
+    let messageContent = content;
+    let messageIv = "unencrypted";
+
+    if (sharedKey) {
+        const encryptedMessage = await encryptMessage(content, sharedKey);
+        messageContent = encryptedMessage.ciphertext;
+        messageIv = encryptedMessage.iv;
+    }
 
     const { data, error } = await supabase
         .from("messages")
@@ -111,7 +134,8 @@ export async function sendMessage(
             conversation_id: conversationId,
             sender_id: senderId,
             receiver_id: receiverId,
-            content,
+            content: messageContent,
+            iv: messageIv,
         })
         .select("*")
         .single();
@@ -126,7 +150,8 @@ export async function sendMessage(
         conversationId: data.conversation_id,
         senderId: data.sender_id,
         receiverId: data.receiver_id,
-        content: data.content,
+        content: content, // Return plaintext so UI doesn't flicker to ciphertext
+        iv: data.iv,
         createdAt: data.created_at,
         isRead: data.is_read,
         isMessageFromCurrentUser: true,
@@ -159,16 +184,42 @@ export async function markMessagesAsRead(
 
 // ── Map a raw Supabase row to the Message type ──
 // Used by the realtime subscription to convert incoming payloads
-export function mapRowToMessage(
+export async function mapRowToMessage(
     row: Record<string, unknown>,
     userId: string
-): Message {
+): Promise<Message> {
+    const otherUserId = row.sender_id === userId ? row.receiver_id as string : row.sender_id as string;
+    let sharedKey: CryptoKey | null = null;
+    try {
+        sharedKey = await getSharedKeyForChat(userId, otherUserId);
+    } catch (e) {
+        console.warn("Could not get shared key (recipient might not have keys setup yet). Messages will stay encrypted.", e);
+        // We continue without a shared key
+    }
+    let decryptedContent = "";
+    if (row.iv === "unencrypted") {
+        decryptedContent = row.content as string;
+    } else if (sharedKey) {
+        try {
+            decryptedContent = await decryptMessage(
+                {
+                    ciphertext: row.content as string,
+                    iv: row.iv as string
+                },
+                sharedKey
+            );
+        } catch (error) {
+            console.error("Failed to decrypt message:", row.id, error);
+            decryptedContent = "Error decrypting message";
+        }
+    }
     return {
         id: row.id as string,
         conversationId: row.conversation_id as string,
         senderId: row.sender_id as string,
         receiverId: row.receiver_id as string,
-        content: row.content as string,
+        content: decryptedContent,
+        iv: row.iv as string,
         createdAt: row.created_at as string,
         isRead: row.is_read as boolean,
         isMessageFromCurrentUser: (row.sender_id as string) === userId,

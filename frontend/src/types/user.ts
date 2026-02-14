@@ -1,17 +1,18 @@
 export interface UserProfile {
-    imageUrl: string;
-    username: string;
-    fullName: string;
+  imageUrl: string;
+  username: string;
+  fullName: string;
 }
 
 export interface UserProfileComplete {
-    imageUrl: string;
-    username: string;
-    fullName: string;
-    bio: string;
-    interests_count: number;
-    connections_count: number;
-    aura: number;
+  id: string;
+  imageUrl: string;
+  username: string;
+  fullName: string;
+  bio: string;
+  interests_count: number;
+  connections_count: number;
+  aura: number;
 }
 
 export type UserPresence = "online" | "offline" | "away" | "typing"

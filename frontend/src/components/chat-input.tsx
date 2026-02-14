@@ -8,15 +8,11 @@ import { Message } from "@/types/messages";
 
 interface ChatInputProps {
     onSendMessage: (content: string) => void;
-    replyingTo: Message | null;
-    onCancelReply: () => void;
     disabled?: boolean;
 }
 
 export function ChatInput({
     onSendMessage,
-    replyingTo,
-    onCancelReply,
     disabled = false,
 }: ChatInputProps) {
     const [message, setMessage] = useState("");
@@ -33,13 +29,6 @@ export function ChatInput({
     useEffect(() => {
         adjustHeight();
     }, [message, adjustHeight]);
-
-    // Focus textarea when replying
-    useEffect(() => {
-        if (replyingTo) {
-            textareaRef.current?.focus();
-        }
-    }, [replyingTo]);
 
     const handleSend = () => {
         const trimmed = message.trim();
@@ -63,26 +52,6 @@ export function ChatInput({
 
     return (
         <div className="shrink-0 border-t bg-card/80 backdrop-blur-sm">
-            {/* Reply preview bar */}
-            {replyingTo && (
-                <div className="flex items-center gap-2 px-4 pt-2 animate-in slide-in-from-bottom-2 duration-150">
-                    <div className="flex-1 px-3 py-1.5 rounded-lg bg-muted border-l-2 border-primary text-xs">
-                        <p className="font-medium text-muted-foreground mb-0.5">
-                            Replying to message
-                        </p>
-                        <p className="truncate text-foreground">{replyingTo.content}</p>
-                    </div>
-                    <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        className="cursor-pointer rounded-full shrink-0"
-                        onClick={onCancelReply}
-                    >
-                        <X className="h-4 w-4" />
-                    </Button>
-                </div>
-            )}
-
             {/* Input row */}
             <div className="flex items-end gap-2 p-3 sm:p-4">
                 {/* Attachment button */}

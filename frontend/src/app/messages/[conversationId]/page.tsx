@@ -26,7 +26,6 @@ export default function ConversationPage() {
     const [messages, setMessages] = useState<Message[]>([]);
     const [participant, setParticipant] = useState<ConversationParticipant | null>(null);
     const [loading, setLoading] = useState(true);
-    const [replyingTo, setReplyingTo] = useState<Message | null>(null);
     const [userId, setUserId] = useState<string | null>(null);
     const [sending, setSending] = useState(false);
 
@@ -76,11 +75,11 @@ export default function ConversationPage() {
                     table: "messages",
                     filter: `conversation_id=eq.${conversationId}`,
                 },
-                (payload) => {
+                async (payload) => {
                     const currentUserId = userIdRef.current;
                     if (!currentUserId) return;
 
-                    const newMsg = mapRowToMessage(payload.new, currentUserId);
+                    const newMsg = await mapRowToMessage(payload.new, currentUserId);
 
                     // Only add if it's from the other user (our own messages
                     // are already added optimistically)
@@ -104,11 +103,11 @@ export default function ConversationPage() {
                     table: "messages",
                     filter: `conversation_id=eq.${conversationId}`,
                 },
-                (payload) => {
+                async (payload) => {
                     const currentUserId = userIdRef.current;
                     if (!currentUserId) return;
 
-                    const updatedMsg = mapRowToMessage(payload.new, currentUserId);
+                    const updatedMsg = await mapRowToMessage(payload.new, currentUserId);
 
                     // Update the message in state (e.g. is_read changed)
                     setMessages((prev) =>
@@ -156,10 +155,10 @@ export default function ConversationPage() {
             createdAt: new Date().toISOString(),
             isRead: false,
             isMessageFromCurrentUser: true,
+            iv: "unencrypted",
         };
 
         setMessages((prev) => [...prev, optimisticMsg]);
-        setReplyingTo(null);
         setSending(true);
 
         try {
@@ -256,9 +255,7 @@ export default function ConversationPage() {
                                     <ChatDateSeparator date={msg.createdAt} />
                                 )}
                                 <div
-                                    onDoubleClick={() => setReplyingTo(msg)}
                                     className="cursor-default"
-                                    title="Double-click to reply"
                                 >
                                     <ChatBubble
                                         message={msg}
@@ -277,8 +274,6 @@ export default function ConversationPage() {
             {/* Input */}
             <ChatInput
                 onSendMessage={handleSendMessage}
-                replyingTo={replyingTo}
-                onCancelReply={() => setReplyingTo(null)}
                 disabled={sending}
             />
         </Card>
