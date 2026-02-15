@@ -72,6 +72,8 @@ export async function initializeUserKeys(userId: string): Promise<void> {
     }
 }
 
+const sharedKeyCache = new Map<string, CryptoKey>();
+
 /**
  * Get shared encryption key for a specific chat
  * Each chat partner = different shared key (automatically!)
@@ -80,6 +82,11 @@ export async function getSharedKeyForChat(
     myUserId: string,
     theirUserId: string
 ): Promise<CryptoKey> {
+    // Check in-memory cache for the derived shared key
+    if (sharedKeyCache.has(theirUserId)) {
+        return sharedKeyCache.get(theirUserId)!;
+    }
+
     // Get my private key from localStorage
     const myPrivateKeyBase64 = localStorage.getItem(`private_key_${myUserId}`)
     if (!myPrivateKeyBase64) {
@@ -91,6 +98,9 @@ export async function getSharedKeyForChat(
 
     // 3. Derive shared secret (unique for this chat!)
     const sharedKey = await deriveSharedSecret(myPrivateKey, theirPublicKey)
+
+    // Cache the derived key
+    sharedKeyCache.set(theirUserId, sharedKey);
 
     return sharedKey
 }

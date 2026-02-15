@@ -6,6 +6,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { Toaster } from "sonner";
 import { PresenceTracker } from "@/components/presence-tracker";
+import { QueryProvider } from "@/components/providers/query-provider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -32,27 +33,29 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-primary-foreground`}
       >
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-          <SidebarProvider>
-            {/* Mobile/tablet top bar - fixed at viewport top */}
-            <div className="fixed top-0 left-0 right-0 z-50 md:hidden flex items-center gap-2 border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60 p-4">
-              <SidebarTrigger />
-              <h1 className="text-lg font-semibold">Hue<span className="font-extrabold">Meet</span></h1>
-            </div>
+        <QueryProvider>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
+            <SidebarProvider>
+              {/* Mobile/tablet top bar - fixed at viewport top */}
+              <div className="fixed top-0 left-0 right-0 z-50 md:hidden flex items-center gap-2 border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60 p-4">
+                <SidebarTrigger />
+                <h1 className="text-lg font-semibold">Hue<span className="font-extrabold">Meet</span></h1>
+              </div>
 
-            <AppSidebar />
-            <main className="w-full min-h-screen">
-              <PresenceTracker />
-              {children}
-            </main>
-            <Toaster />
-          </SidebarProvider>
-        </ThemeProvider>
+              <AppSidebar />
+              <main className="w-full min-h-screen">
+                <PresenceTracker />
+                {children}
+              </main>
+              <Toaster />
+            </SidebarProvider>
+          </ThemeProvider>
+        </QueryProvider>
       </body>
     </html>
   );
