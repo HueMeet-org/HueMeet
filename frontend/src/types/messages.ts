@@ -4,6 +4,10 @@ export interface Message {
     senderId: string;
     receiverId: string;
     content: string;
+    fileUrl?: string | null;
+    fileName?: string | null;
+    fileType?: string | null;
+    fileSize?: number | null;
     iv: string;
     createdAt: string;
     isRead: boolean;

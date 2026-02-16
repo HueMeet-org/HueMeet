@@ -59,6 +59,10 @@ export async function getMessages(conversationId: string, userId: string): Promi
             receiver_id,
             content,
             iv,
+            file_url,
+            file_name,
+            file_type,
+            file_size,
             created_at,
             is_read
         `)
@@ -108,7 +112,13 @@ export async function sendMessage(
     conversationId: string,
     senderId: string,
     receiverId: string,
-    content: string
+    content: string,
+    file?: {
+        url: string;
+        name: string;
+        type: string;
+        size: number;
+    }
 ): Promise<Message> {
     const supabase = createClient();
     // Get shared key for THIS specific chat
@@ -136,6 +146,10 @@ export async function sendMessage(
             receiver_id: receiverId,
             content: messageContent,
             iv: messageIv,
+            file_url: file?.url,
+            file_name: file?.name,
+            file_type: file?.type,
+            file_size: file?.size,
         })
         .select("*")
         .single();
@@ -155,6 +169,10 @@ export async function sendMessage(
         createdAt: data.created_at,
         isRead: data.is_read,
         isMessageFromCurrentUser: true,
+        fileUrl: file?.url,
+        fileName: file?.name,
+        fileType: file?.type,
+        fileSize: file?.size,
     };
 }
 
@@ -223,5 +241,9 @@ export async function mapRowToMessage(
         createdAt: row.created_at as string,
         isRead: row.is_read as boolean,
         isMessageFromCurrentUser: (row.sender_id as string) === userId,
+        fileUrl: row.file_url as string | null,
+        fileName: row.file_name as string | null,
+        fileType: row.file_type as string | null,
+        fileSize: row.file_size as number | null,
     };
 }

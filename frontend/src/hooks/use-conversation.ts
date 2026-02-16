@@ -10,6 +10,13 @@ import {
 } from "@/lib/messages/service";
 import { Message } from "@/types/messages";
 
+interface FileType {
+    url: string;
+    name: string;
+    type: string;
+    size: number;
+}
+
 export function useConversation(conversationId: string, userId: string | null) {
     const queryClient = useQueryClient();
     const supabase = createClient();
@@ -36,10 +43,10 @@ export function useConversation(conversationId: string, userId: string | null) {
 
     // Send Message Mutation (with Optimistic Updates)
     const { mutate: send } = useMutation({
-        mutationFn: ({ content, receiverId }: { content: string; receiverId: string }) =>
-            sendMessage(conversationId, userId!, receiverId, content),
+        mutationFn: ({ content, receiverId, file }: { content: string; receiverId: string; file?: FileType }) =>
+            sendMessage(conversationId, userId!, receiverId, content, file),
 
-        onMutate: async ({ content, receiverId }) => {
+        onMutate: async ({ content, receiverId, file }) => {
             // Cancel outgoing refetches so they don't overwrite our optimistic update
             await queryClient.cancelQueries({ queryKey: keys.messages });
 
@@ -56,6 +63,10 @@ export function useConversation(conversationId: string, userId: string | null) {
                 isRead: false,
                 isMessageFromCurrentUser: true,
                 iv: "unencrypted",
+                fileUrl: file?.url,
+                fileName: file?.name,
+                fileType: file?.type,
+                fileSize: file?.size,
             };
 
             // Update cache instantly
@@ -115,8 +126,8 @@ export function useConversation(conversationId: string, userId: string | null) {
         messages,
         participant,
         loading: loadingMessages || loadingParticipant,
-        sendMessage: (content: string) => {
-            if (participant) send({ content, receiverId: participant.id });
+        sendMessage: (content: string, file?: any) => {
+            if (participant) send({ content, receiverId: participant.id, file });
         }
     };
 }
