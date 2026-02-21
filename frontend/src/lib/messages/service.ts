@@ -3,6 +3,7 @@ import { createClient } from "../supabase/client";
 import { getSharedKeyForChat } from "../userKeyManager";
 import { decryptMessage, encryptMessage } from "../encryption";
 import { getFileUrl } from "../fileUpload";
+import { toast } from "sonner";
 
 
 export async function getParticipant(conversationId: string, userId: string): Promise<ConversationParticipant | null> {
@@ -130,11 +131,12 @@ export async function sendMessage(
     try {
         sharedKey = await getSharedKeyForChat(senderId, receiverId);
     } catch (e) {
-        console.warn("Encryption keys missing, sending unencrypted message:", e);
+        toast.error("Failed To Send Message!!");
+        throw new Error("Failed to get shared key for chat");
     }
 
     let messageContent = content;
-    let messageIv = "unencrypted";
+    let messageIv: string | null = null;
 
     if (sharedKey) {
         const encryptedMessage = await encryptMessage(content, sharedKey);
@@ -237,37 +239,8 @@ export async function mapRowToMessage(
         }
     }
     // Resolve file URL: the DB stores the storage path.
-    // Generate a fresh signed URL, then decrypt if the file was encrypted.
-    let resolvedFileUrl: string | null = null;
-    const storedPath = row.file_url as string | null;
-    if (storedPath) {
-        try {
-            const signedUrl = await getFileUrl(storedPath);
-            if (row.file_iv && sharedKey) {
-                // File is encrypted — fetch the raw bytes and decrypt
-                const response = await fetch(signedUrl);
-                const encryptedBuffer = await response.arrayBuffer();
-                const iv = Uint8Array.from(atob(row.file_iv as string), c => c.charCodeAt(0));
-                const decryptedBuffer = await crypto.subtle.decrypt(
-                    { name: "AES-GCM", iv },
-                    sharedKey,
-                    encryptedBuffer
-                );
-                const mimeType = (row.file_type as string) || "application/octet-stream";
-                const blob = new Blob([decryptedBuffer], { type: mimeType });
-                resolvedFileUrl = await new Promise<string>((resolve) => {
-                    const reader = new FileReader();
-                    reader.onload = () => resolve(reader.result as string);
-                    reader.readAsDataURL(blob);
-                });
-            } else {
-                // File is not encrypted — use the signed URL directly
-                resolvedFileUrl = signedUrl;
-            }
-        } catch (e) {
-            console.error("Failed to resolve file attachment:", row.id, e);
-        }
-    }
+    // We pass the stored path directly. The FileAttachment component will fetch and decrypt on demand.
+    const resolvedFileUrl: string | null = (row.file_url as string) || null;
 
     return {
         id: row.id as string,

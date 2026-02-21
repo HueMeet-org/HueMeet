@@ -219,7 +219,7 @@ export async function getActiveConnections(userId: string): Promise<ConnectedUse
     if (conversationId) {
       const { data: participant } = await supabase
         .from("conversation_participants")
-        .select("id")
+        .select("conversation_id")
         .eq("conversation_id", conversationId)
         .eq("user_id", userId)
         .single();
