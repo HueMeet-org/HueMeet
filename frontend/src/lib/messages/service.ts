@@ -2,6 +2,7 @@ import { Message, ConversationParticipant } from "@/types/messages";
 import { createClient } from "../supabase/client";
 import { getSharedKeyForChat } from "../userKeyManager";
 import { decryptMessage, encryptMessage } from "../encryption";
+import { getFileUrl } from "../fileUpload";
 
 
 export async function getParticipant(conversationId: string, userId: string): Promise<ConversationParticipant | null> {
@@ -63,6 +64,7 @@ export async function getMessages(conversationId: string, userId: string): Promi
             file_name,
             file_type,
             file_size,
+            file_iv,
             created_at,
             is_read
         `)
@@ -114,10 +116,12 @@ export async function sendMessage(
     receiverId: string,
     content: string,
     file?: {
-        url: string;
+        url: string;         // signed URL — returned to cache for immediate display
+        storagePath: string; // UUID filename stored in DB
         name: string;
         type: string;
         size: number;
+        fileIv?: string;
     }
 ): Promise<Message> {
     const supabase = createClient();
@@ -146,10 +150,13 @@ export async function sendMessage(
             receiver_id: receiverId,
             content: messageContent,
             iv: messageIv,
-            file_url: file?.url,
+            // Store the storage path, not a signed URL — signed URLs expire after 1 hour.
+            // A fresh URL is generated at read time via getFileUrl().
+            file_url: file?.storagePath ?? null,
             file_name: file?.name,
             file_type: file?.type,
             file_size: file?.size,
+            file_iv: file?.fileIv ?? null,
         })
         .select("*")
         .single();
@@ -173,6 +180,7 @@ export async function sendMessage(
         fileName: file?.name,
         fileType: file?.type,
         fileSize: file?.size,
+        fileIv: file?.fileIv ?? null,
     };
 }
 
@@ -182,10 +190,9 @@ export async function markMessagesAsRead(
     conversationId: string,
     userId: string
 ): Promise<void> {
-    console.log("Marking messages as read for conversation:", conversationId, "and user:", userId);
     const supabase = createClient();
 
-    const { data, error: updateError } = await supabase
+    const { error: updateError } = await supabase
         .from("messages")
         .update({ is_read: true })
         .eq("conversation_id", conversationId)
@@ -195,8 +202,6 @@ export async function markMessagesAsRead(
 
     if (updateError) {
         console.error("Failed to mark messages as read:", updateError);
-    } else {
-        console.log(`Updated ${data?.length || 0} messages`); // Check if any rows updated
     }
 }
 
@@ -231,6 +236,39 @@ export async function mapRowToMessage(
             decryptedContent = "Error decrypting message";
         }
     }
+    // Resolve file URL: the DB stores the storage path.
+    // Generate a fresh signed URL, then decrypt if the file was encrypted.
+    let resolvedFileUrl: string | null = null;
+    const storedPath = row.file_url as string | null;
+    if (storedPath) {
+        try {
+            const signedUrl = await getFileUrl(storedPath);
+            if (row.file_iv && sharedKey) {
+                // File is encrypted — fetch the raw bytes and decrypt
+                const response = await fetch(signedUrl);
+                const encryptedBuffer = await response.arrayBuffer();
+                const iv = Uint8Array.from(atob(row.file_iv as string), c => c.charCodeAt(0));
+                const decryptedBuffer = await crypto.subtle.decrypt(
+                    { name: "AES-GCM", iv },
+                    sharedKey,
+                    encryptedBuffer
+                );
+                const mimeType = (row.file_type as string) || "application/octet-stream";
+                const blob = new Blob([decryptedBuffer], { type: mimeType });
+                resolvedFileUrl = await new Promise<string>((resolve) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result as string);
+                    reader.readAsDataURL(blob);
+                });
+            } else {
+                // File is not encrypted — use the signed URL directly
+                resolvedFileUrl = signedUrl;
+            }
+        } catch (e) {
+            console.error("Failed to resolve file attachment:", row.id, e);
+        }
+    }
+
     return {
         id: row.id as string,
         conversationId: row.conversation_id as string,
@@ -241,9 +279,10 @@ export async function mapRowToMessage(
         createdAt: row.created_at as string,
         isRead: row.is_read as boolean,
         isMessageFromCurrentUser: (row.sender_id as string) === userId,
-        fileUrl: row.file_url as string | null,
+        fileUrl: resolvedFileUrl,
         fileName: row.file_name as string | null,
         fileType: row.file_type as string | null,
         fileSize: row.file_size as number | null,
+        fileIv: row.file_iv as string | null,
     };
 }

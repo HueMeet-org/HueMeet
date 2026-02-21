@@ -51,16 +51,9 @@ export function ChatInput({
         if (!trimmed && !file) return;
 
         try {
-            let uploadedFile = null;
-            if (file) {
-                const { uploadFile } = await import("@/lib/fileUpload");
-                uploadedFile = await uploadFile(file);
-            }
-
-            onSendMessage(trimmed, uploadedFile);
+            onSendMessage(trimmed, file || undefined);
             setMessage("");
             removeFile();
-            // Reset height
             if (textareaRef.current) {
                 textareaRef.current.style.height = "auto";
             }

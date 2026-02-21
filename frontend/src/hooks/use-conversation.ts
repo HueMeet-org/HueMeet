@@ -9,26 +9,27 @@ import {
     mapRowToMessage
 } from "@/lib/messages/service";
 import { Message } from "@/types/messages";
+import { uploadFile } from "@/lib/fileUpload";
 
 interface FileType {
-    url: string;
-    name: string;
+    url: string;          // fresh signed URL — used for optimistic preview & returned to cache
+    storagePath: string;  // UUID filename in storage — stored in DB so URL can be regenerated
+    name: string;         // original display name shown in the chat bubble
     type: string;
     size: number;
+    fileIv?: string;
 }
 
 export function useConversation(conversationId: string, userId: string | null) {
     const queryClient = useQueryClient();
-    const supabase = createClient();
-    // Memoize keys to prevent unstable references
-    const keys = useMemo(() => ({
-        messages: ["messages", conversationId] as const,
-        participant: ["participant", conversationId] as const,
-    }), [conversationId]);
+    const supabase = useMemo(() => createClient(), []);
+    const messageKey = ["messages", conversationId] as const;
+    const participantKey = ["participant", conversationId] as const;
+
 
     // Fetch Participant
     const { data: participant, isLoading: loadingParticipant } = useQuery({
-        queryKey: keys.participant,
+        queryKey: participantKey,
         queryFn: () => userId ? getParticipant(conversationId, userId) : null,
         enabled: !!userId && !!conversationId,
         staleTime: Infinity, // Participant details rarely change
@@ -36,7 +37,7 @@ export function useConversation(conversationId: string, userId: string | null) {
 
     // Fetch Messages
     const { data: messages = [], isLoading: loadingMessages } = useQuery({
-        queryKey: keys.messages,
+        queryKey: messageKey,
         queryFn: () => userId ? getMessages(conversationId, userId) : [],
         enabled: !!userId && !!conversationId,
     });
@@ -48,11 +49,12 @@ export function useConversation(conversationId: string, userId: string | null) {
 
         onMutate: async ({ content, receiverId, file }) => {
             // Cancel outgoing refetches so they don't overwrite our optimistic update
-            await queryClient.cancelQueries({ queryKey: keys.messages });
+            await queryClient.cancelQueries({ queryKey: messageKey });
 
-            const previousMessages = queryClient.getQueryData<Message[]>(keys.messages);
+            const previousMessages = queryClient.getQueryData<Message[]>(messageKey);
 
-            // Create optimistic message
+            // Create optimistic message — use the signed URL that was already resolved
+            // before send() was called (passed in via file.url). No extra network call needed.
             const optimisticMsg: Message = {
                 id: `temp-${Date.now()}`,
                 conversationId,
@@ -67,22 +69,23 @@ export function useConversation(conversationId: string, userId: string | null) {
                 fileName: file?.name,
                 fileType: file?.type,
                 fileSize: file?.size,
+                fileIv: file?.fileIv,
             };
 
             // Update cache instantly
-            queryClient.setQueryData<Message[]>(keys.messages, (old = []) => [...(old || []), optimisticMsg]);
+            queryClient.setQueryData<Message[]>(messageKey, (old = []) => [...(old || []), optimisticMsg]);
 
             return { previousMessages };
         },
         onError: (_err, _newTodo, context) => {
             // Rollback on error
             if (context?.previousMessages) {
-                queryClient.setQueryData(keys.messages, context.previousMessages);
+                queryClient.setQueryData(messageKey, context.previousMessages);
             }
         },
         onSuccess: (sentMessage) => {
             // Replace the temp message with the actual one from DB
-            queryClient.setQueryData<Message[]>(keys.messages, (old = []) =>
+            queryClient.setQueryData<Message[]>(messageKey, (old = []) =>
                 old.map(msg => msg.id.startsWith("temp-") ? sentMessage : msg)
             );
         },
@@ -96,11 +99,12 @@ export function useConversation(conversationId: string, userId: string | null) {
             .channel(`messages:${conversationId}`)
             .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages", filter: `conversation_id=eq.${conversationId}` },
                 async (payload) => {
+
                     const newMsg = await mapRowToMessage(payload.new, userId);
 
                     // Only add if it's NOT from us (ours are handled via mutation success)
                     if (!newMsg.isMessageFromCurrentUser) {
-                        queryClient.setQueryData<Message[]>(keys.messages, (old = []) => {
+                        queryClient.setQueryData<Message[]>(messageKey, (old = []) => {
                             if (old.some(m => m.id === newMsg.id)) return old;
                             return [...old, newMsg];
                         });
@@ -110,24 +114,45 @@ export function useConversation(conversationId: string, userId: string | null) {
                     }
                 })
             .on("postgres_changes", { event: "UPDATE", schema: "public", table: "messages", filter: `conversation_id=eq.${conversationId}` },
-                async (payload) => {
-                    const updatedMsg = await mapRowToMessage(payload.new, userId);
-
-                    queryClient.setQueryData<Message[]>(keys.messages, (old = []) =>
-                        old.map(msg => msg.id === updatedMsg.id ? updatedMsg : msg)
+                (payload) => {
+                    // Only patch the scalar fields that can change (e.g. is_read).
+                    // Do NOT call mapRowToMessage here — it would re-fetch and re-decrypt
+                    // any file attachment on every read-receipt update.
+                    queryClient.setQueryData<Message[]>(messageKey, (old = []) =>
+                        old.map(msg =>
+                            msg.id === payload.new.id
+                                ? { ...msg, isRead: payload.new.is_read as boolean }
+                                : msg
+                        )
                     );
                 })
             .subscribe();
 
         return () => { supabase.removeChannel(channel); };
-    }, [conversationId, userId, queryClient, keys.messages, supabase]);
+    }, [conversationId, userId, queryClient, supabase]);
 
     return {
         messages,
         participant,
         loading: loadingMessages || loadingParticipant,
-        sendMessage: (content: string, file?: any) => {
-            if (participant) send({ content, receiverId: participant.id, file });
+        sendMessage: async (content: string, file?: File) => {
+            if (!participant) return;
+            let uploadedFile: FileType | undefined;
+            if (file) {
+                const localPreviewUrl = URL.createObjectURL(file);
+                // Upload the (encrypted) file and get back its storage path
+                const result = await uploadFile(file, userId!, participant.id);
+
+                uploadedFile = {
+                    url: localPreviewUrl,            // used for immediate display
+                    storagePath: result.name,  // UUID path stored in DB
+                    name: file.name,           // original display name
+                    type: file.type,
+                    size: file.size,
+                    fileIv: result.fileIv,
+                };
+            }
+            send({ content, receiverId: participant.id, file: uploadedFile });
         }
     };
 }

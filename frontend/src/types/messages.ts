@@ -8,6 +8,7 @@ export interface Message {
     fileName?: string | null;
     fileType?: string | null;
     fileSize?: number | null;
+    fileIv?: string | null;
     iv: string;
     createdAt: string;
     isRead: boolean;

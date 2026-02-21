@@ -42,18 +42,17 @@ export default function ConversationPage() {
         messagesEndRef.current?.scrollIntoView({ behavior });
     }, []);
 
+    const isInitialLoad = useRef(true);
     useEffect(() => {
         if (!loading && messages.length > 0) {
-            scrollToBottom("instant");
+            if (isInitialLoad.current) {
+                scrollToBottom("instant");
+                isInitialLoad.current = false;
+            } else {
+                scrollToBottom();
+            }
         }
-    }, [loading, messages.length]); // Added messages.length to dependency
-
-    // Scroll on new messages
-    useEffect(() => {
-        if (!loading && messages.length > 0) {
-            scrollToBottom();
-        }
-    }, [messages.length, loading, scrollToBottom]);
+    }, [loading, messages.length]);
 
 
     // ── Loading skeleton ──
