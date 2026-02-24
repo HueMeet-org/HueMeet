@@ -275,8 +275,7 @@ export async function getActiveConnections(userId: string): Promise<ConnectedUse
           sharedKey
         );
       } catch (error) {
-        console.error("Failed to decrypt message:", lastMessage.id, error);
-        decryptedContent = "Error decrypting message";
+        decryptedContent = "";
       }
     }
 

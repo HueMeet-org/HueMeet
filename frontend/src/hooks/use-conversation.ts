@@ -64,6 +64,7 @@ export function useConversation(conversationId: string, userId: string | null) {
                 createdAt: new Date().toISOString(),
                 isRead: false,
                 isMessageFromCurrentUser: true,
+                isEncrypted: content.length > 0,
                 iv: "unencrypted",
                 fileUrl: file?.url,
                 fileName: file?.name,

@@ -2,7 +2,7 @@
 
 import { Message } from "@/types/messages";
 import { cn } from "@/lib/utils";
-import { Check, CheckCheck } from "lucide-react";
+import { Check, CheckCheck, Lock } from "lucide-react";
 import { FileAttachment } from "./file-attachment";
 
 interface ChatBubbleProps {
@@ -38,7 +38,16 @@ export function ChatBubble({ message, isGroupedWithPrevious }: ChatBubbleProps) 
                 )}
 
                 {/* Message content */}
-                {message.content && <p className="whitespace-pre-wrap">{message.content}</p>}
+                {message.content ? (
+                    <p className="whitespace-pre-wrap">{message.content}</p>
+                ) : (
+                    message.isEncrypted && (
+                        <div className="flex items-center gap-2 py-1 opacity-70">
+                            <Lock className="h-3.5 w-3.5" />
+                            <span className="text-xs italic">Locked message</span>
+                        </div>
+                    )
+                )}
 
                 {/* Time + status row */}
                 <div

@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { Send, Smile, Paperclip, Mic, X } from "lucide-react";
 import { toast } from "sonner";
 import { Input } from "./ui/input";
+import { analyzeAura, ToxicityLevel } from "@/lib/aura/service";
 
 interface ChatInputProps {
     onSendMessage: (content: string, file?: any) => void;
@@ -49,6 +50,13 @@ export function ChatInput({
     const handleSend = async () => {
         const trimmed = message.trim();
         if (!trimmed && !file) return;
+
+        // send only safe messages
+        const response = await analyzeAura(trimmed, ToxicityLevel.SAFE);
+        if (response.is_toxic) {
+            toast.error("Message is toxic");
+            return;
+        }
 
         try {
             onSendMessage(trimmed, file || undefined);

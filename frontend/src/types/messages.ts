@@ -9,6 +9,7 @@ export interface Message {
     fileType?: string | null;
     fileSize?: number | null;
     fileIv?: string | null;
+    isEncrypted?: boolean;
     iv: string;
     createdAt: string;
     isRead: boolean;

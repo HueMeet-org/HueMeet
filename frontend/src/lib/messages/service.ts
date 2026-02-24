@@ -178,6 +178,7 @@ export async function sendMessage(
         createdAt: data.created_at,
         isRead: data.is_read,
         isMessageFromCurrentUser: true,
+        isEncrypted: false,
         fileUrl: file?.url,
         fileName: file?.name,
         fileType: file?.type,
@@ -222,9 +223,9 @@ export async function mapRowToMessage(
         // We continue without a shared key
     }
     let decryptedContent = "";
-    if (row.iv === "unencrypted") {
-        decryptedContent = row.content as string;
-    } else if (sharedKey) {
+    let isEncrypted = true;
+
+    if (sharedKey) {
         try {
             decryptedContent = await decryptMessage(
                 {
@@ -233,11 +234,15 @@ export async function mapRowToMessage(
                 },
                 sharedKey
             );
+            isEncrypted = false;
         } catch (error) {
-            console.error("Failed to decrypt message:", row.id, error);
-            decryptedContent = "Error decrypting message";
+            // console.log("Failed to decrypt message:", row.id, error);
+            decryptedContent = ""; // Clear content on decryption failure
         }
+    } else {
+        decryptedContent = ""; // Clear content if no shared key available
     }
+
     // Resolve file URL: the DB stores the storage path.
     // We pass the stored path directly. The FileAttachment component will fetch and decrypt on demand.
     const resolvedFileUrl: string | null = (row.file_url as string) || null;
@@ -248,6 +253,7 @@ export async function mapRowToMessage(
         senderId: row.sender_id as string,
         receiverId: row.receiver_id as string,
         content: decryptedContent,
+        isEncrypted,
         iv: row.iv as string,
         createdAt: row.created_at as string,
         isRead: row.is_read as boolean,
