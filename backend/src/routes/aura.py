@@ -108,6 +108,21 @@ def analyze_emotion(text: str) -> dict:
         raise HTTPException(status_code=500, detail=f"Error analyzing text: {str(e)}")
 
 
+def get_aura_score(emotion: float) -> int:
+    """
+    Calculate aura score based on emotion score.
+
+    Args:
+        emotion_score: Emotion score from emotion analysis
+
+    Returns:
+        Aura score based on emotion score
+    """
+    if emotion['emotion_label'] in ["joy", "gratitude", "encouragement"]: # Positive emotions contribute to higher aura score
+        return emotion['emotion_score'] / 9 # Normalize to 0-1 range so if score is 0.9, aura score will be 0.1
+    else:
+        return 0.0 # Neutral and negative emotions do not contribute to aura score
+
 @router.post("/analyze", response_model=AuraAnalysisResponse)
 def analyze_aura(request: AuraAnalysisRequest) -> AuraAnalysisResponse:
     """
@@ -183,8 +198,9 @@ def analyze_aura(request: AuraAnalysisRequest) -> AuraAnalysisResponse:
                     emotion_score=emotion["emotion_score"],
                     message_allowed=False,
                 )
+
         return AuraAnalysisResponse(
-            aura=0,
+            aura=get_aura_score(emotion),
             is_toxic=toxicity["is_toxic"],
             toxicity_level=toxicity_level,
             toxicity_score=toxicity["toxicity_score"],

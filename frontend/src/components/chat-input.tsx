@@ -9,7 +9,7 @@ import { Input } from "./ui/input";
 import { analyzeAura, ToxicityLevel } from "@/lib/aura/service";
 
 interface ChatInputProps {
-    onSendMessage: (content: string, file?: any) => void;
+    onSendMessage: (content: string, auraScore: number, file?: any) => void;
     disabled?: boolean;
 }
 
@@ -59,7 +59,7 @@ export function ChatInput({
         }
 
         try {
-            onSendMessage(trimmed, file || undefined);
+            onSendMessage(trimmed, response.aura_score, file || undefined);
             setMessage("");
             removeFile();
             if (textareaRef.current) {

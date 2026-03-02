@@ -4,6 +4,7 @@ import { getSharedKeyForChat } from "../userKeyManager";
 import { decryptMessage, encryptMessage } from "../encryption";
 import { getFileUrl } from "../fileUpload";
 import { toast } from "sonner";
+import { updateProfileAuraScore } from "../profile/service";
 
 
 export async function getParticipant(conversationId: string, userId: string): Promise<ConversationParticipant | null> {
@@ -67,7 +68,8 @@ export async function getMessages(conversationId: string, userId: string): Promi
             file_size,
             file_iv,
             created_at,
-            is_read
+            is_read,
+            aura
         `)
         .eq("conversation_id", conversationId)
         .order("created_at", { ascending: true });
@@ -116,6 +118,7 @@ export async function sendMessage(
     senderId: string,
     receiverId: string,
     content: string,
+    auraScore: number,
     file?: {
         url: string;         // signed URL — returned to cache for immediate display
         storagePath: string; // UUID filename stored in DB
@@ -159,6 +162,7 @@ export async function sendMessage(
             file_type: file?.type,
             file_size: file?.size,
             file_iv: file?.fileIv ?? null,
+            aura: auraScore,
         })
         .select("*")
         .single();
@@ -167,6 +171,9 @@ export async function sendMessage(
         console.error("Supabase sendMessage error:", error.message, "| code:", error.code, "| details:", error.details);
         throw new Error(`Failed to send message: ${error.message}`);
     }
+
+    // after sending the message, update the profile aura score
+    await updateProfileAuraScore(auraScore);
 
     return {
         id: data.id,
@@ -184,6 +191,7 @@ export async function sendMessage(
         fileType: file?.type,
         fileSize: file?.size,
         fileIv: file?.fileIv ?? null,
+        auraScore: auraScore,
     };
 }
 
@@ -263,5 +271,6 @@ export async function mapRowToMessage(
         fileType: row.file_type as string | null,
         fileSize: row.file_size as number | null,
         fileIv: row.file_iv as string | null,
+        auraScore: row.aura as number,
     };
 }

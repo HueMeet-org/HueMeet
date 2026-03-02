@@ -14,6 +14,7 @@ export interface Message {
     createdAt: string;
     isRead: boolean;
     isMessageFromCurrentUser: boolean;
+    auraScore: number;
 }
 
 export interface ConversationParticipant {

@@ -44,8 +44,8 @@ export function useConversation(conversationId: string, userId: string | null) {
 
     // Send Message Mutation (with Optimistic Updates)
     const { mutate: send } = useMutation({
-        mutationFn: ({ content, receiverId, file }: { content: string; receiverId: string; file?: FileType }) =>
-            sendMessage(conversationId, userId!, receiverId, content, file),
+        mutationFn: ({ content, receiverId, file, auraScore }: { content: string; receiverId: string; file?: FileType; auraScore: number }) =>
+            sendMessage(conversationId, userId!, receiverId, content, auraScore, file),
 
         onMutate: async ({ content, receiverId, file }) => {
             // Cancel outgoing refetches so they don't overwrite our optimistic update
@@ -71,6 +71,7 @@ export function useConversation(conversationId: string, userId: string | null) {
                 fileType: file?.type,
                 fileSize: file?.size,
                 fileIv: file?.fileIv,
+                auraScore: 0,
             };
 
             // Update cache instantly
@@ -136,7 +137,7 @@ export function useConversation(conversationId: string, userId: string | null) {
         messages,
         participant,
         loading: loadingMessages || loadingParticipant,
-        sendMessage: async (content: string, file?: File) => {
+        sendMessage: async (content: string, auraScore: number, file?: File) => {
             if (!participant) return;
             let uploadedFile: FileType | undefined;
             if (file) {
@@ -153,7 +154,7 @@ export function useConversation(conversationId: string, userId: string | null) {
                     fileIv: result.fileIv,
                 };
             }
-            send({ content, receiverId: participant.id, file: uploadedFile });
+            send({ content, receiverId: participant.id, file: uploadedFile, auraScore });
         }
     };
 }

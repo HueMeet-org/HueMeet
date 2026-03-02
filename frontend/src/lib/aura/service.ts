@@ -21,13 +21,19 @@ export const analyzeAura = async (text: string, filter_level: ToxicityLevel) => 
         }),
     }).then((res) => res.json()).catch((err) => {
         console.error(err);
-        return { is_toxic: false };
+        return { is_toxic: false, aura_score: 0 };
     });
 
     if (response.is_toxic) {
         toast.error("Message is toxic");
-        return;
+        return {
+            is_toxic: response.is_toxic,
+            aura_score: response.aura_score,
+        };
     }
 
-    return response;
+    return {
+        is_toxic: response.is_toxic,
+        aura_score: response.aura,
+    };
 }
