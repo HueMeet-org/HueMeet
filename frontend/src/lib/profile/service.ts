@@ -30,9 +30,11 @@ export async function updateProfileAuraScore(auraScore: number): Promise<void> {
     throw new Error('Not authenticated');
   }
 
+  const old_aura_score = await getUserProfileData().then((data) => data.aura);
+
   const { error } = await supabase
     .from("user_profiles_complete")
-    .update({ aura: auraScore })
+    .update({ aura: old_aura_score + auraScore })
     .eq('id', user.id)
 
   if (error) {

@@ -7,6 +7,7 @@ import { Send, Smile, Paperclip, Mic, X } from "lucide-react";
 import { toast } from "sonner";
 import { Input } from "./ui/input";
 import { analyzeAura, ToxicityLevel } from "@/lib/aura/service";
+import { updateProfileAuraScore } from "@/lib/profile/service";
 
 interface ChatInputProps {
     onSendMessage: (content: string, auraScore: number, file?: any) => void;
@@ -55,6 +56,8 @@ export function ChatInput({
         const response = await analyzeAura(trimmed, ToxicityLevel.SAFE);
         if (response.is_toxic) {
             toast.error("Message is toxic");
+            // update supabase profile aura score
+            await updateProfileAuraScore(response.aura_score);
             return;
         }
 

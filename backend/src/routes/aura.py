@@ -108,7 +108,7 @@ def analyze_emotion(text: str) -> dict:
         raise HTTPException(status_code=500, detail=f"Error analyzing text: {str(e)}")
 
 
-def get_aura_score(emotion: float) -> int:
+def get_aura_score(emotion: dict) -> int:
     """
     Calculate aura score based on emotion score.
 
@@ -118,6 +118,7 @@ def get_aura_score(emotion: float) -> int:
     Returns:
         Aura score based on emotion score
     """
+    
     if emotion['emotion_label'] in ["joy", "gratitude", "encouragement"]: # Positive emotions contribute to higher aura score
         return emotion['emotion_score'] / 9 # Normalize to 0-1 range so if score is 0.9, aura score will be 0.1
     else:
@@ -164,7 +165,7 @@ def analyze_aura(request: AuraAnalysisRequest) -> AuraAnalysisResponse:
                 )
 
         elif request.filter_level == "mild":
-            if toxicity["is_toxic"] and toxicity_level == ToxicityLevel.MILD:
+            if toxicity["is_toxic"] and toxicity_level == ToxicityLevel.MILD or toxicity_level == ToxicityLevel.MODERATE or toxicity_level == ToxicityLevel.SEVERE:
                 return AuraAnalysisResponse(
                     aura=-5,
                     is_toxic=True,
@@ -176,7 +177,7 @@ def analyze_aura(request: AuraAnalysisRequest) -> AuraAnalysisResponse:
                 )
 
         elif request.filter_level == "moderate":
-            if toxicity["is_toxic"] and toxicity_level == ToxicityLevel.MODERATE:
+            if toxicity["is_toxic"] and toxicity_level == ToxicityLevel.MODERATE or toxicity_level == ToxicityLevel.SEVERE:
                 return AuraAnalysisResponse(
                     aura=-5,
                     is_toxic=True,
