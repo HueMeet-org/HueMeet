@@ -6,6 +6,80 @@ import { getFileUrl } from "../fileUpload";
 import { toast } from "sonner";
 import { updateProfileAuraScore } from "../profile/service";
 
+export interface UnreadMessageNotification {
+  senderId: string;
+  senderName: string;
+  senderUsername: string;
+  senderAvatarUrl?: string;
+  unreadCount: number;
+  conversationId: string;
+  lastMessageAt: string;
+}
+
+export async function getUnreadMessageNotifications(): Promise<UnreadMessageNotification[]> {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) return [];
+
+  // Step 1: Fetch all unread messages where current user is the receiver
+  const { data: messages, error } = await supabase
+    .from("messages")
+    .select("id, sender_id, conversation_id, created_at")
+    .eq("receiver_id", user.id)
+    .eq("is_read", false)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("Failed to fetch unread notifications:", error);
+    return [];
+  }
+
+  if (!messages || messages.length === 0) return [];
+
+  // Step 2: Get unique sender IDs and batch-fetch their profiles
+  const senderIds = [...new Set(messages.map((m) => m.sender_id))];
+
+  const { data: profiles, error: profilesError } = await supabase
+    .from("profiles")
+    .select("id, full_name, username, avatar_url")
+    .in("id", senderIds);
+
+  if (profilesError) {
+    console.error("Failed to fetch sender profiles:", profilesError);
+    return [];
+  }
+
+  const profileMap = new Map(profiles?.map((p) => [p.id, p]) ?? []);
+
+  // Step 3: Group messages by sender
+  const grouped = new Map<string, UnreadMessageNotification>();
+
+  for (const msg of messages) {
+    const profile = profileMap.get(msg.sender_id);
+    if (!profile) continue;
+
+    if (!grouped.has(msg.sender_id)) {
+      grouped.set(msg.sender_id, {
+        senderId: msg.sender_id,
+        senderName: profile.full_name || profile.username,
+        senderUsername: profile.username,
+        senderAvatarUrl: profile.avatar_url ?? undefined,
+        unreadCount: 1,
+        conversationId: msg.conversation_id,
+        lastMessageAt: msg.created_at,
+      });
+    } else {
+      grouped.get(msg.sender_id)!.unreadCount += 1;
+    }
+  }
+
+  // Sort by most recent first
+  return Array.from(grouped.values()).sort(
+    (a, b) => new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime()
+  );
+}
+
 
 export async function getParticipant(conversationId: string, userId: string): Promise<ConversationParticipant | null> {
     const supabase = createClient();

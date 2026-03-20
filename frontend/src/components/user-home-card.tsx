@@ -28,21 +28,21 @@ export const UserHomeCard = () => {
         }
 
         // Get values from the profile table
-        const username = data.username
-        const fullName = data.full_name
-        const bio = data.bio
-        const aura = data.aura
-        const interests_count = data.interests_count
-        const connections_count = data.connections_count
+        const id = user.id
+        const username = data.username as string
+        const fullName = (data.full_name as string | null) ?? ''
+        const bio = (data.bio as string | null) ?? ''
+        const aura = (data.aura as number | null) ?? 0
+        const interests_count = data.interests_count as number
+        const connections_count = data.connections_count as number
 
-
-        let imageUrl = data.avatar_url
+        let imageUrl = (data.avatar_url as string | null) ?? ''
 
         if (!imageUrl) {
             imageUrl = user.user_metadata?.avatar_url || user.user_metadata?.picture || '/globe.svg';
         }
 
-        return { imageUrl, username, fullName, bio, interests_count, connections_count, aura }
+        return { id, imageUrl, username, fullName, bio, interests_count, connections_count, aura }
     }, [supabase])
 
     useEffect(() => {
@@ -83,7 +83,7 @@ export const UserHomeCard = () => {
             
             <CardContent className="pt-0 pb-4">
                 <div className="flex flex-col md:flex-row items-start md:justify-start gap-3 md:gap-6">
-                    <div className="w-full md:flex-shrink-0 flex items-center gap-3 p-3 sm:p-4 rounded-lg bg-accent border-accent border" style={{ width: 'clamp(180px, 18vw, 260px)' }}>
+                    <div className="w-full md:shrink-0 flex items-center gap-3 p-3 sm:p-4 rounded-lg bg-accent border-accent border" style={{ width: 'clamp(180px, 18vw, 260px)' }}>
                         <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-full bg-yellow-400/20">
                             <Sparkles className="h-5 w-5 sm:h-6 sm:w-6 text-accent-foreground dark:text-accent-foreground" />
                         </div>
@@ -93,7 +93,7 @@ export const UserHomeCard = () => {
                         </div>
                     </div>
                     
-                    <div className="w-full md:flex-shrink-0 flex items-center gap-3 p-3 sm:p-4 rounded-lg bg-blue-500/10 border border-blue-500/20" style={{ width: 'clamp(180px, 18vw, 260px)' }}>
+                    <div className="w-full md:shrink-0 flex items-center gap-3 p-3 sm:p-4 rounded-lg bg-blue-500/10 border border-blue-500/20" style={{ width: 'clamp(180px, 18vw, 260px)' }}>
                         <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-full bg-blue-500/20">
                             <Users className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600 dark:text-blue-400" />
                         </div>
