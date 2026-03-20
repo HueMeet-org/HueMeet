@@ -7,54 +7,20 @@ import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar'
 import Link from 'next/link'
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyTitle } from './ui/empty'
 import { Skeleton } from './ui/skeleton'
-import { Notification } from '@/types/notification'
-
-export const notificationsMock: Notification[] = [
-  {
-    id: "n_1",
-    type: "missed_call",
-    title: "Missed Call",
-    description: "You missed a video call from Rohan Mehta",
-    imageUrl: "https://i.pravatar.cc/150?img=45",
-    createdAt: "5 mins ago",
-    isRead: false,
-  },
-  {
-    id: "n_2",
-    type: "unread_message",
-    title: "New Message",
-    description: "Aarav Sharma: 'Are we still on for the meeting?'",
-    imageUrl: "https://i.pravatar.cc/150?img=11",
-    createdAt: "12 mins ago",
-    isRead: false,
-  },
-  {
-    id: "n_3",
-    type: "aura_update",
-    title: "Aura Level Up!",
-    description: "Your aura increased to 105. Keep interacting!",
-    imageUrl: "/aura-icon.png", // Or a specific aura graphic
-    createdAt: "1 hour ago",
-    isRead: true,
-  },
-  {
-    id: "n_4",
-    type: "alert",
-    title: "Security Alert",
-    description: "New login detected from a Chrome browser on Windows.",
-    imageUrl: "https://cdn-icons-png.flaticon.com/512/564/564619.png",
-    createdAt: "Yesterday",
-    isRead: true,
-  },
-]
+import { getUnreadMessageNotifications, UnreadMessageNotification } from '@/lib/messages/service'
 
 export const HomeNotification = () => {
-  const [notifications, setNotifications] = useState<Notification[]>();
+  const [notifications, setNotifications] = useState<UnreadMessageNotification[]>();
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setNotifications(notificationsMock);
-    setLoading(false);
+    getUnreadMessageNotifications()
+      .then(setNotifications)
+      .catch((err) => {
+        console.error('Failed to fetch notifications:', err);
+        setNotifications([]);
+      })
+      .finally(() => setLoading(false));
   }, [])
 
   if (loading) {
@@ -82,10 +48,10 @@ export const HomeNotification = () => {
           <Empty>
             <EmptyHeader>
               <EmptyTitle>All clear</EmptyTitle>
-              <EmptyDescription>No new alerts or messages</EmptyDescription>
+              <EmptyDescription>No new messages</EmptyDescription>
             </EmptyHeader>
             <EmptyContent>
-              <Link href={'/'}><Button className='cursor-pointer'>Return Home</Button></Link>
+              <Link href={'/messages'}><Button className='cursor-pointer'>Go to Messages</Button></Link>
             </EmptyContent>
           </Empty>
         </CardContent>
@@ -96,32 +62,41 @@ export const HomeNotification = () => {
   return (
     <Card className="h-full flex flex-col m-0 p-0 gap-0">
       <CardHeader className="py-4 px-4">
-        <CardTitle className="text-base sm:text-lg">Notifications</CardTitle>
+        <CardTitle className="text-base sm:text-lg">
+          Notifications
+          <span className="ml-2 inline-flex items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-semibold h-5 min-w-5 px-1.5">
+            {notifications.length}
+          </span>
+        </CardTitle>
       </CardHeader>
-      <CardContent className="flex-1 px-0  mx-2 py-0 gap-0">
+      <CardContent className="flex-1 px-0 mx-2 py-0 gap-0">
         {notifications.map((notif) => (
-          <Item 
-            className={`cursor-pointer hover:bg-muted mb-3 gap-0 p-0 rounded-lg transition-colors ${
-              !notif.isRead ? 'bg-muted/50 ' : ''
-            }`} 
-            key={notif.id}
+          <Item
+            className="cursor-pointer hover:bg-muted mb-1 gap-0 p-0 rounded-lg transition-colors bg-muted/50"
+            key={notif.senderId}
           >
             <ItemContent className="p-3">
-              <Link href={'/'} >
+              <Link href={`/messages/${notif.conversationId}`}>
                 <div className='w-full flex items-center gap-3'>
-                  <div className="flex-shrink-0">
+                  <div className="shrink-0 relative">
                     <Avatar className="h-10 w-10 sm:h-12 sm:w-12">
-                      <AvatarImage src={notif.imageUrl} />
-                      <AvatarFallback>{notif.title[0]}</AvatarFallback>
+                      <AvatarImage src={notif.senderAvatarUrl} />
+                      <AvatarFallback>{notif.senderName[0]}</AvatarFallback>
                     </Avatar>
+                    {/* Unread count badge */}
+                    <span className="absolute -top-1 -right-1 flex items-center justify-center rounded-full bg-primary text-primary-foreground text-[10px] font-bold h-4 min-w-4 px-1">
+                      {notif.unreadCount}
+                    </span>
                   </div>
-                  <div className="flex-1 p-0">
-                    <ItemTitle className={`truncate text-sm sm:text-base ${
-                      !notif.isRead ? "font-bold" : ""
-                    }`}>
-                        {notif.title}
+                  <div className="flex-1 p-0 min-w-0">
+                    <ItemTitle className="truncate text-sm sm:text-base font-semibold">
+                      {notif.senderName}
                     </ItemTitle>
-                    <ItemDescription className="line-clamp-1 text-xs sm:text-xs">{notif.description}</ItemDescription>
+                    <ItemDescription className="line-clamp-1 text-xs">
+                      {notif.unreadCount === 1
+                        ? '1 new message'
+                        : `${notif.unreadCount} new messages`}
+                    </ItemDescription>
                   </div>
                 </div>
               </Link>

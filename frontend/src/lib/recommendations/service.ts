@@ -6,6 +6,7 @@ export type RecommendedUser = {
   full_name: string | null
   avatar_url: string | null
   bio: string | null
+  aura?: number
   shared_interests_count?: number
   interests?: Array<{
     id: string

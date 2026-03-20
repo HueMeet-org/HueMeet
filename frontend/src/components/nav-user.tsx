@@ -88,18 +88,18 @@ export function NavUser({
                         </DropdownMenuLabel>
                         <DropdownMenuSeparator />
                         <DropdownMenuGroup>
-                            <Link href="/account">
+                            <Link href={`/profile/${user?.username}`}>
                                 <DropdownMenuItem>
                                     <UserCircle />
                                     Account
                                 </DropdownMenuItem>
                             </Link>
-                            <Link href={'/settings'}>
+                            {/* <Link href={'/settings'}>
                                 <DropdownMenuItem>
                                     <Settings />
                                     Settings
                                 </DropdownMenuItem>
-                            </Link>
+                            </Link> */}
                         </DropdownMenuGroup>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem onClick={handleLogout}>
