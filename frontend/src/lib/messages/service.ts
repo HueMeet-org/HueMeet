@@ -1,5 +1,10 @@
 import { Message, ConversationParticipant } from "@/types/messages";
 import { createClient } from "../supabase/client";
+import { getSharedKeyForChat } from "../userKeyManager";
+import { decryptMessage, encryptMessage } from "../encryption";
+import { getFileUrl } from "../fileUpload";
+import { toast } from "sonner";
+import { updateProfileAuraScore } from "../profile/service";
 
 
 export async function getParticipant(conversationId: string, userId: string): Promise<ConversationParticipant | null> {
@@ -50,7 +55,22 @@ export async function getMessages(conversationId: string, userId: string): Promi
 
     const { data, error } = await supabase
         .from("messages")
-        .select("*")
+        .select(`
+            id,
+            conversation_id,
+            sender_id,
+            receiver_id,
+            content,
+            iv,
+            file_url,
+            file_name,
+            file_type,
+            file_size,
+            file_iv,
+            created_at,
+            is_read,
+            aura
+        `)
         .eq("conversation_id", conversationId)
         .order("created_at", { ascending: true });
 
@@ -58,17 +78,13 @@ export async function getMessages(conversationId: string, userId: string): Promi
         throw error;
     }
 
-    // map the data to Message type
-    const messages = data.map((msg) => ({
-        id: msg.id,
-        conversationId: msg.conversation_id,
-        senderId: msg.sender_id,
-        receiverId: msg.receiver_id,
-        content: msg.content,
-        createdAt: msg.created_at,
-        isRead: msg.is_read,
-        isMessageFromCurrentUser: msg.sender_id === userId,
-    }));
+    if (!data || data.length === 0) {
+        return [];
+    }
+
+    // map the data using row to messages
+    // this also decrypts the message content
+    const messages = await Promise.all(data.map(async (row) => await mapRowToMessage(row, userId)));
 
     return messages;
 }
@@ -101,9 +117,35 @@ export async function sendMessage(
     conversationId: string,
     senderId: string,
     receiverId: string,
-    content: string
+    content: string,
+    auraScore: number,
+    file?: {
+        url: string;         // signed URL — returned to cache for immediate display
+        storagePath: string; // UUID filename stored in DB
+        name: string;
+        type: string;
+        size: number;
+        fileIv?: string;
+    }
 ): Promise<Message> {
     const supabase = createClient();
+    // Get shared key for THIS specific chat
+    let sharedKey: CryptoKey | null = null;
+    try {
+        sharedKey = await getSharedKeyForChat(senderId, receiverId);
+    } catch (e) {
+        toast.error("Failed To Send Message!!");
+        throw new Error("Failed to get shared key for chat");
+    }
+
+    let messageContent = content;
+    let messageIv: string | null = null;
+
+    if (sharedKey) {
+        const encryptedMessage = await encryptMessage(content, sharedKey);
+        messageContent = encryptedMessage.ciphertext;
+        messageIv = encryptedMessage.iv;
+    }
 
     const { data, error } = await supabase
         .from("messages")
@@ -111,7 +153,16 @@ export async function sendMessage(
             conversation_id: conversationId,
             sender_id: senderId,
             receiver_id: receiverId,
-            content,
+            content: messageContent,
+            iv: messageIv,
+            // Store the storage path, not a signed URL — signed URLs expire after 1 hour.
+            // A fresh URL is generated at read time via getFileUrl().
+            file_url: file?.storagePath ?? null,
+            file_name: file?.name,
+            file_type: file?.type,
+            file_size: file?.size,
+            file_iv: file?.fileIv ?? null,
+            aura: auraScore,
         })
         .select("*")
         .single();
@@ -121,15 +172,26 @@ export async function sendMessage(
         throw new Error(`Failed to send message: ${error.message}`);
     }
 
+    // after sending the message, update the profile aura score
+    await updateProfileAuraScore(auraScore);
+
     return {
         id: data.id,
         conversationId: data.conversation_id,
         senderId: data.sender_id,
         receiverId: data.receiver_id,
-        content: data.content,
+        content: content, // Return plaintext so UI doesn't flicker to ciphertext
+        iv: data.iv,
         createdAt: data.created_at,
         isRead: data.is_read,
         isMessageFromCurrentUser: true,
+        isEncrypted: false,
+        fileUrl: file?.url,
+        fileName: file?.name,
+        fileType: file?.type,
+        fileSize: file?.size,
+        fileIv: file?.fileIv ?? null,
+        auraScore: auraScore,
     };
 }
 
@@ -139,10 +201,9 @@ export async function markMessagesAsRead(
     conversationId: string,
     userId: string
 ): Promise<void> {
-    console.log("Marking messages as read for conversation:", conversationId, "and user:", userId);
     const supabase = createClient();
 
-    const { data, error: updateError } = await supabase
+    const { error: updateError } = await supabase
         .from("messages")
         .update({ is_read: true })
         .eq("conversation_id", conversationId)
@@ -152,25 +213,64 @@ export async function markMessagesAsRead(
 
     if (updateError) {
         console.error("Failed to mark messages as read:", updateError);
-    } else {
-        console.log(`Updated ${data?.length || 0} messages`); // Check if any rows updated
     }
 }
 
 // ── Map a raw Supabase row to the Message type ──
 // Used by the realtime subscription to convert incoming payloads
-export function mapRowToMessage(
+export async function mapRowToMessage(
     row: Record<string, unknown>,
     userId: string
-): Message {
+): Promise<Message> {
+    const otherUserId = row.sender_id === userId ? row.receiver_id as string : row.sender_id as string;
+    let sharedKey: CryptoKey | null = null;
+    try {
+        sharedKey = await getSharedKeyForChat(userId, otherUserId);
+    } catch (e) {
+        console.warn("Could not get shared key (recipient might not have keys setup yet). Messages will stay encrypted.", e);
+        // We continue without a shared key
+    }
+    let decryptedContent = "";
+    let isEncrypted = true;
+
+    if (sharedKey) {
+        try {
+            decryptedContent = await decryptMessage(
+                {
+                    ciphertext: row.content as string,
+                    iv: row.iv as string
+                },
+                sharedKey
+            );
+            isEncrypted = false;
+        } catch (error) {
+            // console.log("Failed to decrypt message:", row.id, error);
+            decryptedContent = ""; // Clear content on decryption failure
+        }
+    } else {
+        decryptedContent = ""; // Clear content if no shared key available
+    }
+
+    // Resolve file URL: the DB stores the storage path.
+    // We pass the stored path directly. The FileAttachment component will fetch and decrypt on demand.
+    const resolvedFileUrl: string | null = (row.file_url as string) || null;
+
     return {
         id: row.id as string,
         conversationId: row.conversation_id as string,
         senderId: row.sender_id as string,
         receiverId: row.receiver_id as string,
-        content: row.content as string,
+        content: decryptedContent,
+        isEncrypted,
+        iv: row.iv as string,
         createdAt: row.created_at as string,
         isRead: row.is_read as boolean,
         isMessageFromCurrentUser: (row.sender_id as string) === userId,
+        fileUrl: resolvedFileUrl,
+        fileName: row.file_name as string | null,
+        fileType: row.file_type as string | null,
+        fileSize: row.file_size as number | null,
+        fileIv: row.file_iv as string | null,
+        auraScore: row.aura as number,
     };
 }

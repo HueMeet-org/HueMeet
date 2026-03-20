@@ -2,6 +2,8 @@ import { createClient } from '@/lib/supabase/client';
 import { ConnectedUsers, UserPresence } from '@/types/user';
 import { isUserOnline } from '../presence/service';
 import { createConversationParticipant } from '../messages/service';
+import { decryptMessage } from '../encryption';
+import { getSharedKeyForChat } from '../userKeyManager';
 
 export type ConnectionRequest = {
   id: string
@@ -217,7 +219,7 @@ export async function getActiveConnections(userId: string): Promise<ConnectedUse
     if (conversationId) {
       const { data: participant } = await supabase
         .from("conversation_participants")
-        .select("id")
+        .select("conversation_id")
         .eq("conversation_id", conversationId)
         .eq("user_id", userId)
         .single();
@@ -252,7 +254,30 @@ export async function getActiveConnections(userId: string): Promise<ConnectedUse
       throw messagesError;
     }
     messages.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-    const lastMessage = messages[0] || undefined;
+    let lastMessage = messages[0] || undefined;
+    let sharedKey: CryptoKey | null = null;
+    try {
+      sharedKey = await getSharedKeyForChat(userId, otherUser.id);
+    } catch (e) {
+      console.warn("Could not get shared key (recipient might not have keys setup yet). Messages will stay encrypted.", e);
+      // We continue without a shared key
+    }
+    let decryptedContent = "";
+    if (lastMessage?.iv === "unencrypted") {
+      decryptedContent = lastMessage.content as string;
+    } else if (sharedKey) {
+      try {
+        decryptedContent = await decryptMessage(
+          {
+            ciphertext: lastMessage.content as string,
+            iv: lastMessage.iv as string
+          },
+          sharedKey
+        );
+      } catch (error) {
+        decryptedContent = "";
+      }
+    }
 
     const unreadCount = messages.filter(
       msg => !msg.is_read && msg.receiver_id === userId
@@ -263,7 +288,7 @@ export async function getActiveConnections(userId: string): Promise<ConnectedUse
       name: otherUser.full_name as string,
       username: otherUser.username as string,
       avatarUrl: otherUser.avatar_url as string | undefined,
-      lastMessage: lastMessage?.content || undefined,
+      lastMessage: decryptedContent || undefined,
       lastMessageAt: lastMessage?.created_at || conn.updated_at || conn.created_at as string,
       unreadCount,
       conversationId: conversationId || "",

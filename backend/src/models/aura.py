@@ -20,12 +20,12 @@ class EmotionLabel(str, Enum):
 class AuraAnalysisRequest(BaseModel):
     """Request model for aura analysis."""
     text: str
-    filter_level: Optional[ToxicityLevel] = ToxicityLevel.SAFE
+    filter_level: Optional[ToxicityLevel] = ToxicityLevel.MODERATE
 
 
 class AuraAnalysisResponse(BaseModel):
     """Response model for aura analysis."""
-    aura: int
+    aura: float
     is_toxic: bool
     toxicity_level: Optional[ToxicityLevel]
     toxicity_score: Optional[float]
