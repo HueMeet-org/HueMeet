@@ -1,4 +1,3 @@
-import datetime
 from fastapi import APIRouter, HTTPException
 from transformers import (
     AutoModelForSequenceClassification,
