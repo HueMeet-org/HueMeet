@@ -1,7 +1,6 @@
 import { toast } from "sonner";
 
 const FASTAPI_HOST = process.env.NEXT_PUBLIC_FASTAPI_HOST;
-const API_SECRET_KEY = process.env.NEXT_PUBLIC_API_SECRET_KEY;
 
 export enum ToxicityLevel {
     SAFE = "safe",
@@ -15,7 +14,6 @@ export const analyzeAura = async (text: string, filter_level: ToxicityLevel) => 
         method: "POST",
         headers: {
             "Content-Type": "application/json",
-            "x-api-key": API_SECRET_KEY || "",
         },
         body: JSON.stringify({
             text,
