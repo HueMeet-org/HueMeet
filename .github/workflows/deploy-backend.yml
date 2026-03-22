@@ -84,14 +84,21 @@ jobs:
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
           HF_SPACE_ID: ${{ secrets.HF_SPACE_ID }}
+          GITHUB_SHA_VAR: ${{ github.sha }}
         run: |
-          huggingface-cli upload \
-            "$HF_SPACE_ID" \
-            ./backend \
-            . \
-            --repo-type space \
-            --token "$HF_TOKEN" \
-            --commit-message "ci: deploy from GitHub SHA ${{ github.sha }}"
+          python - <<'EOF'
+          import os
+          from huggingface_hub import HfApi
+
+          api = HfApi(token=os.environ["HF_TOKEN"])
+          api.upload_folder(
+              folder_path="./backend",
+              path_in_repo=".",
+              repo_id=os.environ["HF_SPACE_ID"],
+              repo_type="space",
+              commit_message=f"ci: deploy from GitHub SHA {os.environ.get('GITHUB_SHA_VAR', 'unknown')}"
+          )
+          EOF
 
       # Push environment variables / secrets as HF Space secrets
       # so the running container can read them at runtime.
