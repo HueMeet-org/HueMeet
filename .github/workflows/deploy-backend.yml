@@ -52,6 +52,11 @@ jobs:
         with:
           fetch-depth: 0   # Full history so git push works correctly
 
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
       - name: Validate required secrets
         run: |
           if [ -z "${{ secrets.HF_TOKEN }}" ]; then
