@@ -10,6 +10,7 @@ import {
 } from "@/lib/messages/service";
 import { Message } from "@/types/messages";
 import { uploadFile } from "@/lib/fileUpload";
+import type { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
 
 interface FileType {
     url: string;          // fresh signed URL — used for optimistic preview & returned to cache
@@ -22,7 +23,7 @@ interface FileType {
 
 export function useConversation(conversationId: string, userId: string | null) {
     const queryClient = useQueryClient();
-    const supabase = useMemo(() => createClient(), []);
+    const supabase = createClient();
     const messageKey = ["messages", conversationId] as const;
     const participantKey = ["participant", conversationId] as const;
 
@@ -54,7 +55,7 @@ export function useConversation(conversationId: string, userId: string | null) {
             const previousMessages = queryClient.getQueryData<Message[]>(messageKey);
 
             // Create optimistic message — use the signed URL that was already resolved
-            // before send() was called (passed in via file.url). No extra network call needed.
+            // before send() was called (passed in via file.url).
             const optimisticMsg: Message = {
                 id: `temp-${Date.now()}`,
                 conversationId,
@@ -100,9 +101,9 @@ export function useConversation(conversationId: string, userId: string | null) {
         const channel = supabase
             .channel(`messages:${conversationId}`)
             .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages", filter: `conversation_id=eq.${conversationId}` },
-                async (payload) => {
+                async (payload: RealtimePostgresChangesPayload<Record<string, unknown>>) => {
 
-                    const newMsg = await mapRowToMessage(payload.new, userId);
+                    const newMsg = await mapRowToMessage(payload.new as Record<string, unknown>, userId);
 
                     // Only add if it's NOT from us (ours are handled via mutation success)
                     if (!newMsg.isMessageFromCurrentUser) {
@@ -116,14 +117,12 @@ export function useConversation(conversationId: string, userId: string | null) {
                     }
                 })
             .on("postgres_changes", { event: "UPDATE", schema: "public", table: "messages", filter: `conversation_id=eq.${conversationId}` },
-                (payload) => {
-                    // Only patch the scalar fields that can change (e.g. is_read).
-                    // Do NOT call mapRowToMessage here — it would re-fetch and re-decrypt
-                    // any file attachment on every read-receipt update.
+                (payload: RealtimePostgresChangesPayload<Record<string, unknown>>) => {
+                    const updated = payload.new as Record<string, unknown>;
                     queryClient.setQueryData<Message[]>(messageKey, (old = []) =>
                         old.map(msg =>
-                            msg.id === payload.new.id
-                                ? { ...msg, isRead: payload.new.is_read as boolean }
+                            msg.id === updated.id
+                                ? { ...msg, isRead: updated.is_read as boolean }
                                 : msg
                         )
                     );
@@ -131,7 +130,7 @@ export function useConversation(conversationId: string, userId: string | null) {
             .subscribe();
 
         return () => { supabase.removeChannel(channel); };
-    }, [conversationId, userId, queryClient, supabase]);
+    }, [conversationId, userId, queryClient]);
 
     return {
         messages,

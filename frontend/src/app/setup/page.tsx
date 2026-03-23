@@ -74,7 +74,7 @@ export default function SetupPage() {
       .eq('user_id', user.id)
 
     if (userInterests) {
-      setSelectedInterests(new Set(userInterests.map(ui => ui.interest_id)))
+      setSelectedInterests(new Set(userInterests.map((ui: { interest_id: string }) => ui.interest_id)))
     }
 
     setLoading(false)
