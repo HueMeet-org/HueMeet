@@ -178,7 +178,7 @@ export async function getActiveConnections(userId: string): Promise<ConnectedUse
   }
 
   // return after formatting into ConnectedUsers type
-  const new_data: ConnectedUsers[] = await Promise.all(data!.map(async conn => {
+  const new_data: ConnectedUsers[] = await Promise.all((data as any[]).map(async conn => {
     const sender = Array.isArray(conn.sender) ? conn.sender[0] : conn.sender;
     const receiver = Array.isArray(conn.receiver) ? conn.receiver[0] : conn.receiver;
 
@@ -253,7 +253,7 @@ export async function getActiveConnections(userId: string): Promise<ConnectedUse
     if (messagesError) {
       throw messagesError;
     }
-    messages.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    messages.sort((a: { created_at: string }, b: { created_at: string }) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     let lastMessage = messages[0] || undefined;
     let sharedKey: CryptoKey | null = null;
     try {
@@ -280,8 +280,8 @@ export async function getActiveConnections(userId: string): Promise<ConnectedUse
     }
 
     const unreadCount = messages.filter(
-      msg => !msg.is_read && msg.receiver_id === userId
-    ).length;
+      (msg: any) => !msg.is_read && msg.receiver_id === userId
+    ).length;;
 
     return {
       id: otherUser.id as string,
