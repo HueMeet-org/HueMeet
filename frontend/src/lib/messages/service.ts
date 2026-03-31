@@ -38,7 +38,7 @@ export async function getUnreadMessageNotifications(): Promise<UnreadMessageNoti
   if (!messages || messages.length === 0) return [];
 
   // Step 2: Get unique sender IDs and batch-fetch their profiles
-  const senderIds = [...new Set(messages.map((m) => m.sender_id))];
+  const senderIds = [...new Set(messages.map((m: any) => m.sender_id))];
 
   const { data: profiles, error: profilesError } = await supabase
     .from("profiles")
@@ -50,13 +50,13 @@ export async function getUnreadMessageNotifications(): Promise<UnreadMessageNoti
     return [];
   }
 
-  const profileMap = new Map(profiles?.map((p) => [p.id, p]) ?? []);
+  const profileMap = new Map(profiles?.map((p: any) => [p.id, p]) ?? []);
 
   // Step 3: Group messages by sender
   const grouped = new Map<string, UnreadMessageNotification>();
 
   for (const msg of messages) {
-    const profile = profileMap.get(msg.sender_id);
+    const profile = profileMap.get(msg.sender_id) as any;
     if (!profile) continue;
 
     if (!grouped.has(msg.sender_id)) {
@@ -158,7 +158,7 @@ export async function getMessages(conversationId: string, userId: string): Promi
 
     // map the data using row to messages
     // this also decrypts the message content
-    const messages = await Promise.all(data.map(async (row) => await mapRowToMessage(row, userId)));
+    const messages = await Promise.all(data.map(async (row: Record<string, unknown>) => await mapRowToMessage(row, userId)));
 
     return messages;
 }

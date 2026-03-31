@@ -29,7 +29,7 @@ export async function getUserInterests(userId: string) {
     return []
   }
   
-  return data.map(item => item.interest_id)
+  return data.map((item: { interest_id: string }) => item.interest_id)
 }
 
 // Get user's connections (to exclude)
@@ -47,7 +47,7 @@ export async function getUserConnections(userId: string) {
   }
   
   // Extract all connected user IDs (accepted, pending, rejected)
-  return data.flatMap(conn => 
+  return data.flatMap((conn: { sender_id: string; receiver_id: string }) => 
     [conn.sender_id, conn.receiver_id].filter(id => id !== userId)
   )
 }

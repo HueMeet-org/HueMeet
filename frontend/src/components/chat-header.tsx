@@ -4,7 +4,7 @@ import { ConversationParticipant } from "@/types/messages";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { ArrowLeft, Phone, Video, MoreVertical } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { useUserPresence } from "@/hooks/use-presence";
 import { ConnectedUsers } from "@/types/user";
@@ -70,7 +70,7 @@ export function ChatHeader({ participant }: ChatHeaderProps) {
             </Link>
 
             {/* Action buttons */}
-            <div className="flex items-center gap-1">
+            {/* <div className="flex items-center gap-1">
                 <Button
                     variant="ghost"
                     size="icon-sm"
@@ -92,7 +92,7 @@ export function ChatHeader({ participant }: ChatHeaderProps) {
                 >
                     <MoreVertical className="h-4 w-4" />
                 </Button>
-            </div>
+            </div> */}
         </div>
     );
 }

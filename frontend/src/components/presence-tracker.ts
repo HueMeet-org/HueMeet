@@ -1,11 +1,12 @@
 "use client";
-import { useEffect } from 'react'
-import { createClient } from '@/lib/supabase/client'
-import { setUserOffline, setUserOnline } from '@/lib/presence/service'
-import { getUserProfileData } from '@/lib/profile/service'
-import { useState } from 'react'
+import { useEffect } from 'react';
+import { createClient } from '@/lib/supabase/client';
+import { setUserOffline, setUserOnline } from '@/lib/presence/service';
+import { getUserProfileData } from '@/lib/profile/service';
+import { useState } from 'react';
 import { UserProfileComplete } from '@/types/user';
 import { initializeUserKeys } from '@/lib/userKeyManager';
+import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 
 export function PresenceTracker() {
   const [userData, setUserData] = useState<UserProfileComplete>();
@@ -25,7 +26,7 @@ export function PresenceTracker() {
     }
     fetchUserData();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event: AuthChangeEvent, session: Session | null) => {
       if (event === 'SIGNED_IN' && session?.user) {
         try {
           const user = await getUserProfileData();
